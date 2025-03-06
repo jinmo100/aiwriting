@@ -42,6 +42,29 @@
         .markdown-content li {
             margin-bottom: 0.5rem;
         }
+        /* 分页样式 */
+        .pagination {
+            margin-top: 1rem;
+        }
+        
+        /* 历史记录卡片样式 */
+        .history-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .history-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* 详情模态框样式 */
+        .essay-content {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -85,6 +108,10 @@
             <div class="card-body">
                 <h5 class="card-title">历史记录</h5>
                 <div id="history"></div>
+                <!-- 添加分页控件 -->
+                <nav aria-label="历史记录分页" class="d-flex justify-content-center">
+                    <ul class="pagination" id="pagination"></ul>
+                </nav>
             </div>
         </div>
     </div>
@@ -96,6 +123,38 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
             <p class="mt-2">正在评分中...</p>
+        </div>
+    </div>
+
+    <!-- 添加详情模态框 -->
+    <div class="modal fade" id="essayDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">作文详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6>作文内容：</h6>
+                        <div class="essay-content" id="modalContent"></div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>得分：<span id="modalScore"></span></h6>
+                    </div>
+                    <div class="mb-3">
+                        <h6>优点：</h6>
+                        <div class="markdown-content" id="modalStrengths"></div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>建议：</h6>
+                        <div class="markdown-content" id="modalSuggestions"></div>
+                    </div>
+                    <div class="text-muted">
+                        <small>提交时间：<span id="modalTime"></span></small>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -140,29 +199,84 @@
             }
         });
         
-        async function loadHistory() {
+        let currentPage = 0;
+        const pageSize = 10;
+        
+        async function loadHistory(page = 0) {
             try {
-                const response = await fetch('/api/essays');
+                const response = await fetch(`/api/essays/history?page=${page}&size=${pageSize}`);
                 const data = await response.json();
                 
-                const historyHtml = data.map(essay => `
-                    <div class="score-card">
-                        <h6>得分：${essay.score}</h6>
-                        <p class="mb-1"><small class="text-muted">提交时间：${new Date(essay.createdAt).toLocaleString()}</small></p>
-                        <p class="mb-2">${essay.content.substring(0, 100)}...</p>
-                        <div class="mt-2">
-                            <small>
-                                <strong>优点：</strong>
-                                <div class="markdown-content">${marked.parse(essay.strengths)}</div>
-                            </small>
+                const historyHtml = data.content.map(essay => `
+                    <div class="score-card history-card" onclick="showEssayDetail(${essay.id})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6>得分：${essay.score}</h6>
+                            <small class="text-muted">${new Date(essay.createdAt).toLocaleString()}</small>
                         </div>
+                        <p class="mb-2">${essay.content.substring(0, 100)}...</p>
                     </div>
                 `).join('');
                 
                 document.getElementById('history').innerHTML = historyHtml;
                 
+                // 更新分页
+                updatePagination(data);
+                
             } catch (error) {
                 console.error('加载历史记录失败：', error);
+            }
+        }
+        
+        function updatePagination(pageData) {
+            const pagination = document.getElementById('pagination');
+            const totalPages = pageData.totalPages;
+            currentPage = pageData.number;
+            
+            let paginationHtml = '';
+            
+            // 上一页
+            paginationHtml += `
+                <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadHistory(${currentPage - 1})">&laquo;</a>
+                </li>
+            `;
+            
+            // 页码
+            for (let i = 0; i < totalPages; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadHistory(${i})">${i + 1}</a>
+                    </li>
+                `;
+            }
+            
+            // 下一页
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages - 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadHistory(${currentPage + 1})">&raquo;</a>
+                </li>
+            `;
+            
+            pagination.innerHTML = paginationHtml;
+        }
+        
+        async function showEssayDetail(id) {
+            try {
+                const response = await fetch(`/api/essays/${id}`);
+                const essay = await response.json();
+                
+                document.getElementById('modalContent').textContent = essay.content;
+                document.getElementById('modalScore').textContent = essay.score;
+                document.getElementById('modalStrengths').innerHTML = marked.parse(essay.strengths);
+                document.getElementById('modalSuggestions').innerHTML = marked.parse(essay.suggestions);
+                document.getElementById('modalTime').textContent = new Date(essay.createdAt).toLocaleString();
+                
+                const modal = new bootstrap.Modal(document.getElementById('essayDetailModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('加载作文详情失败：', error);
+                alert('加载详情失败');
             }
         }
         

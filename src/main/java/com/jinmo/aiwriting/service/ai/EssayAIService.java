@@ -24,10 +24,10 @@ public class EssayAIService {
         // 移除开头和结尾的空白字符
         response = response.trim();
         // 替换中文引号为英文引号
-//        response = response.replaceAll("“", "\"")
-//                         .replaceAll("”", "\"")
-//                         .replaceAll("'", "'")
-//                         .replaceAll("'", "'");
+        // response = response.replaceAll(""", "\"")
+        // .replaceAll(""", "\"")
+        // .replaceAll("'", "'")
+        // .replaceAll("'", "'");
         return response;
     }
 
@@ -38,35 +38,41 @@ public class EssayAIService {
 
                         评分标准 (总分100分):
                         1. 内容完整性和逻辑性 (30分)
-                           - 主题明确
-                           - 论述完整
-                           - 逻辑连贯
-
                         2. 语言准确性和词汇使用 (30分)
-                           - 词汇丰富度
-                           - 用词准确性
-                           - 表达多样性
-
                         3. 语法正确性 (20分)
-                           - 句法结构
-                           - 时态使用
-                           - 语法规则
-
                         4. 文章结构和格式 (20分)
-                           - 段落组织
-                           - 衔接过渡
-                           - 格式规范
 
-                        请以JSON格式返回分析结果，确保包含以下字段：
+                        请严格按照以下JSON格式返回分析结果：
                         {
-                            "score": <总分，0-100的整数>,
-                            "strengths": <中文，作文的主要优点，具体列举>,
-                            "suggestions": <中文，改进建议，针对性和可操作性强>
+                            "score": <0-100的整数>,
+                            "strengths": [
+                                "<优点1，需包含具体例子>",
+                                "<优点2，需包含具体例子>",
+                                "<优点3，需包含具体例子>"
+                            ],
+                            "suggestions": [
+                                "<建议1，需包含具体例子>",
+                                "<建议2，需包含具体例子>",
+                                "<建议3，需包含具体例子>",
+                                "<建议4，需包含具体例子>",
+                                "<建议5，需包含具体例子>"
+                            ]
                         }
 
-                        "strengths" 和 "suggestions" 字段必须使用中文回答,并且需要包含具体的例子。例如,不要只说"vocabulary usage accurate",而应该指出"恰当使用了academic vocabulary,如运用'phenomenon'一词描述自然现象,使用'consequently'作为逻辑连接词"。不要说"argument lacks depth",而应该建议"在讨论environmental protection时,建议补充具体论据,如'According to WHO research, air pollution causes 7 million premature deaths annually'"。请确保每个优点和建议都有具体的text evidence支持。
+                        注意事项：
+                        1. strengths和suggestions必须是数组格式，使用[]包裹
+                        2. 每个优点和建议都必须是完整的中文句子
+                        3. 每个优点和建议都必须包含具体的文本示例
+                        4. 不要使用Markdown格式的列表符号
+                        5. 不要在JSON中使用多余的换行和缩进
 
-                        请确保返回的是有效的的JSON格式。
+                        优点示例：
+                        "文章用词准确，恰当使用了学术词汇，如使用'consequently'作为逻辑连接词，'phenomenon'描述自然现象"
+
+                        建议示例：
+                        "句式结构单一，建议使用更多复合句。例如，可以将'He is tall. He plays basketball.'改为'Being tall, he excels at basketball.'"
+
+                        请确保返回的是严格的JSON格式，不要添加任何额外的格式化字符。
                         """;
 
         try {
