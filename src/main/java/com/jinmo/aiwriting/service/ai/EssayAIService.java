@@ -100,9 +100,9 @@ public class EssayAIService {
     }
 
     public String hey(String message) {
-        new Prompt(message);
-        // ChatResponse response = openRouterClient.call(prompt);
-        // return response.getResult().getOutput().getContent();
-        return "Hello, " + message;
+        var prompt = new Prompt(message);
+
+        ChatResponse response = openRouterClient.call(prompt);
+        return response.getResult().getOutput().getContent();
     }
 } 
