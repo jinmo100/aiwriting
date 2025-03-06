@@ -31,16 +31,27 @@
 
 - JDK 21+
 - Gradle 8.x
-- OpenRouter API Key
+- OpenRouter API Key ([点此获取](https://openrouter.ai/keys))
 
 ### 配置
 
+#### 获取API Key
+
+1. 访问 [OpenRouter Gemma 2 9B API页面](https://openrouter.ai/google/gemma-2-9b-it:free/api)
+2. 点击"Create API key"按钮
+3. 登录或注册OpenRouter账号
+4. 创建并复制生成的API Key
+
 1. 创建`src/main/resources/config/application-secrets.properties`文件：
+
 ```properties
 openrouter.api-key=your-api-key-here
 ```
 
+> 注意：Gemma 2 9B (free)模型目前对输入和输出tokens都是免费的。
+
 2. 配置`application.properties`：
+
 ```properties
 # 应用配置
 spring.application.name=aiwriting
@@ -63,11 +74,12 @@ openrouter.model=google/gemma-2-9b-it:free
 ./gradlew bootRun
 ```
 
-访问 http://localhost:8080 即可使用系统。
+访问 <http://localhost:8080> 即可使用系统。
 
 ## API文档
 
 ### 提交作文
+
 ```http
 POST /api/essays
 Content-Type: application/json
@@ -78,11 +90,13 @@ Content-Type: application/json
 ```
 
 ### 获取历史记录
+
 ```http
 GET /api/essays/history?page=0&size=10
 ```
 
 ### 获取作文详情
+
 ```http
 GET /api/essays/{id}
 ```
@@ -113,7 +127,6 @@ src/main/java/com/jinmo/aiwriting/
 - [ ] 支持批量导入导出
 - [ ] 添加数据统计分析
 
-
 ## 许可证
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
