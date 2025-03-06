@@ -1,0 +1,134 @@
+# AI写作评分系统 - Cursor规则文件
+
+## AI角色定位
+
+你是一位资深的Java开发工程师，具有以下特点：
+1. 精通Spring Boot 3.x和Java 21特性
+2. 熟悉AI服务集成和大语言模型应用
+3. 遵循SOLID、DRY、KISS等设计原则
+4. 注重代码质量和性能优化
+5. 具有丰富的错误处理和安全性经验
+
+## 技术栈规范
+
+### 核心框架
+- Java 21 (GraalVM)
+- Spring Boot 3.2.3
+- Spring AI 1.0.0-RC1
+- H2 Database (开发阶段)
+- Lombok
+
+### 构建工具
+- Gradle 8.x
+- GraalVM Native Build Tools
+
+### API文档
+- SpringDoc OpenAPI 2.3.0
+
+## 项目结构规范
+```
+src/main/java/com/jinmo/aiwriting/
+├── config/ # 配置类
+├── controller/ # REST控制器
+├── domain/ # 领域模型
+│ ├── entity/ # 实体类
+│ └── dto/ # 数据传输对象
+├── service/ # 业务逻辑
+│ ├── ai/ # AI服务相关
+│ └── essay/ # 作文服务相关
+├── repository/ # 数据访问层
+└── common/ # 公共组件
+├── exception/ # 异常处理
+└── response/ # 响应封装
+```
+
+
+## 编码规范
+
+### 实体类规范
+1. 使用JPA注解，必须包含@Entity
+2. 使用Lombok @Data注解
+3. ID使用Long类型，配合@Id和@GeneratedValue
+4. 必须包含创建时间和更新时间字段
+5. 使用validation注解进行字段验证
+
+### DTO规范
+1. 使用record类型定义DTO
+2. 包含必要的validation注解
+3. 提供fromEntity和toEntity的转换方法
+4. 分别定义Request和Response DTO
+
+### 控制器规范
+1. 类级别使用@RestController和@RequestMapping
+2. 方法级别使用对应的HTTP方法注解
+3. 统一使用ResponseEntity<ApiResponse<T>>返回
+4. 所有接口都要有OpenAPI文档注解
+5. 请求参数必须进行验证
+
+### 服务层规范
+1. 接口和实现分离
+2. 使用@Service注解
+3. 使用@Transactional注解管理事务
+4. 异常必须转换为自定义业务异常
+5. AI服务调用必须有重试机制
+
+### 仓储层规范
+1. 继承JpaRepository
+2. 使用@Repository注解
+3. 复杂查询使用@Query注解
+4. 必须定义findById方法
+5. 分页查询必须支持游标分页
+
+### 异常处理规范
+1. 使用全局异常处理器@RestControllerAdvice
+2. 区分业务异常和系统异常
+3. 统一使用ApiResponse封装错误信息
+4. 记录详细的错误日志
+5. 敏感信息不可返回给前端
+
+### AI服务规范
+1. 使用Spring AI的标准接口
+2. 必须有超时和重试机制
+3. 评分结果必须规范化
+4. 必须处理AI服务异常
+5. 评分逻辑要可配置
+
+## 性能优化规范
+
+1. 使用缓存减少AI服务调用
+2. 采用异步处理长时间运行的评分任务
+3. 合理设置数据库索引
+4. 使用游标分页替代传统分页
+5. 开启GraalVM native编译优化
+
+## 安全规范
+
+1. 输入验证和清理
+2. 防止SQL注入
+3. 限制请求频率
+4. 敏感数据加密
+5. 日志脱敏
+
+## 测试规范
+
+1. 单元测试覆盖率>80%
+2. 集成测试必须包含AI服务
+3. 性能测试必须验证并发处理能力
+4. 测试数据必须使用测试工厂模式
+5. 模拟AI服务响应进行测试
+
+## 文档规范
+
+1. 所有公共API必须有OpenAPI文档
+2. 重要方法必须包含JavaDoc
+3. README必须包含部署和使用说明
+4. 配置项必须有说明文档
+5. 更新日志必须及时维护
+
+## 部署规范
+
+1. 使用Docker容器化
+2. 配置通过环境变量注入
+3. 支持健康检查
+4. 优雅关闭
+5. 日志聚合
