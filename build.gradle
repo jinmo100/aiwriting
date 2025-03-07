@@ -12,6 +12,18 @@ java {
     sourceCompatibility = '21'
 }
 
+// 添加JVM参数配置
+tasks.withType(JavaExec) {
+    jvmArgs = [
+        '-XX:+UseZGC',              // 启用ZGC
+        '-XX:+ZGenerational',       // 启用分代ZGC
+        '-Xmx2g',                 // 设置最大堆内存
+        '-XX:+UseCompressedOops',   // 启用指针压缩
+        '-XX:+UseCompressedClassPointers',
+        '-XX:+HeapDumpOnOutOfMemoryError'  // OOM时生成堆转储
+    ]
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor

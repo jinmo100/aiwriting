@@ -30,10 +30,25 @@
 ### 环境要求
 
 - JDK 21+
+- GraalVM CE 21+ (推荐使用最新版本)
 - Gradle 8.x
 - OpenRouter API Key ([点此获取](https://openrouter.ai/keys))
 
 ### 配置
+
+#### JVM配置
+
+项目默认启用了分代ZGC垃圾收集器以获得更好的性能：
+
+```properties
+# JVM参数
+-XX:+UseZGC              # 启用ZGC
+-XX:+ZGenerational       # 启用分代ZGC
+-Xmx2g                   # 设置最大堆内存为2GB
+-XX:+UseCompressedOops   # 启用指针压缩
+```
+
+> 注意：这些参数已在build.gradle中配置，无需手动设置。
 
 #### 获取API Key
 
@@ -70,9 +85,32 @@ openrouter.model=google/gemma-2-9b-it:free
 
 ### 运行
 
+#### 使用Gradle运行
+
 ```bash
 ./gradlew bootRun
 ```
+
+#### 使用脚本运行（推荐）
+
+```bash
+# 添加执行权限
+chmod +x run.sh
+# 运行
+./run.sh
+```
+
+#### 构建Native Image（可选）
+
+```bash
+# 构建Native Image
+./gradlew nativeCompile
+
+# 运行Native Image
+./build/native/nativeCompile/aiwriting
+```
+
+> 注意：Native Image构建需要安装GraalVM和native-image工具。
 
 访问 <http://localhost:8080> 即可使用系统。
 
@@ -101,6 +139,20 @@ GET /api/essays/history?page=0&size=10
 GET /api/essays/{id}
 ```
 
+## 性能优化
+
+### GC优化
+
+- 使用分代ZGC实现低延迟垃圾回收
+- 启用指针压缩减少内存占用
+- 自动生成堆转储文件便于问题诊断
+
+### Native Image优化
+
+- 支持GraalVM Native Image构建
+- 显著减少启动时间和内存占用
+- 提供更好的容器化支持
+
 ## 项目结构
 
 ```
@@ -126,6 +178,8 @@ src/main/java/com/jinmo/aiwriting/
 - [ ] 添加作文标签/分类
 - [ ] 支持批量导入导出
 - [ ] 添加数据统计分析
+- [ ] 优化Native Image构建配置
+- [ ] 添加性能监控和指标收集
 
 ## 许可证
 
