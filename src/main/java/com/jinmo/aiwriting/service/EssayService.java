@@ -2,12 +2,14 @@ package com.jinmo.aiwriting.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import com.jinmo.aiwriting.common.exception.AIServiceException;
 import com.jinmo.aiwriting.common.exception.ResourceNotFoundException;
 import com.jinmo.aiwriting.domain.dto.EssayRequest;
 import com.jinmo.aiwriting.domain.dto.EssayResponse;
 import com.jinmo.aiwriting.domain.entity.Essay;
 import com.jinmo.aiwriting.repository.EssayRepository;
 import com.jinmo.aiwriting.service.ai.EssayAIService;
+import com.jinmo.aiwriting.service.ai.EssayAnalysis;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,16 +26,35 @@ public class EssayService {
 
     @Transactional
     public EssayResponse submitEssay(EssayRequest request) {
-        var analysis = essayAIService.analyzeEssay(request.content());
+        try {
+            // 分析作文
+            EssayAnalysis analysis = essayAIService.analyzeEssay(request.content());
 
-        var essay = new Essay();
-        essay.setContent(request.content());
-        essay.setScore(analysis.score());
-        essay.setStrengths(String.join("\n- ", analysis.strengths()));
-        essay.setSuggestions(String.join("\n- ", analysis.suggestions()));
+            // 创建新的Essay实体
+            Essay essay = new Essay();
+            essay.setContent(request.content());
+            essay.setScore(analysis.score());
+            essay.setStrengths(String.join("\n- ", analysis.strengths()));
+            essay.setSuggestions(String.join("\n- ", analysis.suggestions()));
 
-        essay = essayRepository.save(essay);
-        return EssayResponse.fromEntity(essay);
+            // 保存到数据库
+            essay = essayRepository.save(essay);
+
+            return EssayResponse.fromEntity(essay);
+        } catch (AIServiceException e) {
+            // 直接抛出AI服务异常，让全局异常处理器处理
+            throw e;
+        } catch (Exception e) {
+            throw new AIServiceException("""
+                    {
+                        "error": "PROCESSING_ERROR",
+                        "message": "作文处理失败",
+                        "details": {
+                            "reason": "服务器处理错误",
+                            "suggestion": "请稍后重试"
+                        }
+                    }""");
+        }
     }
 
     public EssayResponse getEssay(Long id) {

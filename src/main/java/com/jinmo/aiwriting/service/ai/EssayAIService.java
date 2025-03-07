@@ -56,30 +56,52 @@ public class EssayAIService {
     }
 
     public EssayAnalysis analyzeEssay(String content) {
+        // 首先检测是否为英语文本
+        if (!isEnglishText(content)) {
+            throw new AIServiceException("""
+                    {
+                        "error": "INVALID_LANGUAGE",
+                        "message": "只支持英语作文评分",
+                        "details": {
+                            "expected": "英语",
+                            "suggestion": "请提供英语作文"
+                        }
+                    }""");
+        }
+
         String systemPromptText =
                 """
-                        你是一位专业的英语作文评分专家。请对提供的英语作文进行严格的分析和评分。
+                        你是一位专业的英语作文评分专家。你的任务是对英语作文进行评分和分析。
+                        如果发现提交的不是英语作文，请返回以下JSON格式的错误提示：
+                        {
+                            "error": "INVALID_LANGUAGE",
+                            "message": "非英语作文，无法评分",
+                            "details": {
+                                "reason": "<发现的具体问题>",
+                                "suggestion": "请提供英语作文"
+                            }
+                        }
 
                         评分标准 (总分100分):
-                        1. 内容完整性和逻辑性 (30分)
-                        2. 语言准确性和词汇使用 (30分)
-                        3. 语法正确性 (20分)
-                        4. 文章结构和格式 (20分)
+                        1. 内容完整性和逻辑性 (30分) - 评估文章的主题展开、论据支撑和逻辑连贯性
+                        2. 语言准确性和词汇使用 (30分) - 评估英语词汇运用、表达准确性和词汇丰富度
+                        3. 语法正确性 (20分) - 评估英语语法规则运用、句式正确性
+                        4. 文章结构和格式 (20分) - 评估段落组织、文章结构和格式规范
 
                         请严格按照以下JSON格式返回分析结果：
                         {
                             "score": <0-100的整数>,
                             "strengths": [
-                                "<优点1，需包含具体例子>",
-                                "<优点2，需包含具体例子>",
-                                "<优点3，需包含具体例子>"
+                                "<优点1，需引用英语原文中的具体例子>",
+                                "<优点2，需引用英语原文中的具体例子>",
+                                "<优点3，需引用英语原文中的具体例子>"
                             ],
                             "suggestions": [
-                                "<建议1，需包含具体例子>",
-                                "<建议2，需包含具体例子>",
-                                "<建议3，需包含具体例子>",
-                                "<建议4，需包含具体例子>",
-                                "<建议5，需包含具体例子>"
+                                "<建议1，需结合英语写作规范给出具体例子>",
+                                "<建议2，需结合英语写作规范给出具体例子>",
+                                "<建议3，需结合英语写作规范给出具体例子>",
+                                "<建议4，需结合英语写作规范给出具体例子>",
+                                "<建议5，需结合英语写作规范给出具体例子>"
                             ]
                         }
 
@@ -87,15 +109,17 @@ public class EssayAIService {
                         1. 必须返回标准UTF-8编码的JSON
                         2. strengths和suggestions必须是数组格式，使用[]包裹
                         3. 每个优点和建议都必须是完整的中文句子
-                        4. 每个优点和建议都必须包含具体的文本示例
-                        5. 不要使用Markdown格式的列表符号
-                        6. 不要在JSON中使用多余的换行和缩进
+                        4. 每个优点必须引用英语原文中的具体例子
+                        5. 每个建议必须给出英语写作的具体改进示例
+                        6. 不要使用Markdown格式的列表符号
+                        7. 不要在JSON中使用多余的换行和缩进
+                        8. 如果提交的不是英语作文，返回错误提示："非英语作文，无法评分"
 
                         优点示例：
-                        "文章用词准确，恰当使用了学术词汇，如使用'consequently'作为逻辑连接词，'phenomenon'描述自然现象"
+                        "作者准确运用了学术英语词汇，如原文中使用'consequently'作为逻辑连接词，'phenomenon'描述自然现象"
 
                         建议示例：
-                        "句式结构单一，建议使用更多复合句。例如，可以将'He is tall. He plays basketball.'改为'Being tall, he excels at basketball.'"
+                        "文中的简单句过多，建议增加复合句使用。例如，可以将'He is tall. He plays basketball.'改写为'Being tall, he excels at basketball.'"
 
                         请确保返回的是严格的JSON格式，不要添加任何额外的格式化字符。
                         """;
@@ -145,6 +169,30 @@ public class EssayAIService {
             log.error("AI服务异常", e);
             throw new AIServiceException("AI服务分析失败");
         }
+    }
+
+    /**
+     * 检测文本是否为英语 通过检查非英语字符的比例来判断
+     */
+    private boolean isEnglishText(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return false;
+        }
+
+        // 移除标点符号和空白字符
+        text = text.replaceAll("[\\p{Punct}\\s]", "");
+
+        // 统计非英语字符的数量
+        long nonEnglishCount = text.chars()
+                .filter(ch -> !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))).count();
+
+        // 如果非英语字符超过20%，则认为不是英语文本
+        double nonEnglishRatio = (double) nonEnglishCount / text.length();
+
+        log.debug("文本语言检测 - 总字符数: {}, 非英语字符数: {}, 比例: {}", text.length(), nonEnglishCount,
+                nonEnglishRatio);
+
+        return nonEnglishRatio <= 0.2; // 允许20%的非英语字符（数字等）
     }
 
     public String hey(String message) {

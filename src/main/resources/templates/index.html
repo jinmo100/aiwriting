@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <!-- 设置移动端视口，使页面在移动设备上正确显示 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英语作文评分系统</title>
+    <title>AI英语作文评分系统</title>
     <!-- 引入Bootstrap 5的CSS文件，用于页面样式和布局 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- 引入Marked.js，用于将Markdown格式转换为HTML -->
@@ -85,12 +85,48 @@
             border-radius: 0.25rem;
             margin-bottom: 1rem;
         }
+        .error-message {
+            color: #dc3545;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .error-details {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #856404;
+        }
+        #errorContainer {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        #errorTitle {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        #errorMessage {
+            font-size: 1rem;
+        }
+        
+        #errorSuggestion {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
     <!-- 使用Bootstrap的容器组件，添加上边距 -->
     <div class="container mt-5">
-        <h1 class="mb-4">英语作文评分系统</h1>
+        <h1 class="mb-4">AI英语作文评分系统</h1>
         
         <!-- 提交作文的表单卡片 -->
         <div class="card mb-4">
@@ -99,15 +135,23 @@
                 <form id="essayForm">
                     <div class="mb-3">
                         <label for="content" class="form-label">作文内容</label>
-                        <!-- 多行文本输入框 -->
-                        <textarea class="form-control" id="content" rows="10" required></textarea>
+                        <textarea class="form-control" id="essayContent" name="content" rows="10" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">提交评分</button>
                 </form>
             </div>
         </div>
 
-        <!-- 评分结果卡片，默认隐藏 -->
+        <!-- 错误提示卡片 -->
+        <div class="card mb-4" id="errorCard" style="display: none;">
+            <div class="card-body bg-danger-subtle border-danger">
+                <h5 class="card-title text-danger" id="errorTitle"></h5>
+                <p class="card-text" id="errorMessage"></p>
+                <p class="card-text text-muted small" id="errorSuggestion"></p>
+            </div>
+        </div>
+
+        <!-- 评分结果卡片 -->
         <div class="card mb-4" id="resultCard" style="display: none;">
             <div class="card-body">
                 <h5 class="card-title">评分结果</h5>
@@ -200,12 +244,28 @@
             form.addEventListener('submit', async function(e) {
                 // 阻止表单默认提交行为
                 e.preventDefault();
+                
+                // 隐藏之前的错误和结果
+                document.getElementById('errorCard').style.display = 'none';
+                document.getElementById('resultCard').style.display = 'none';
+                
+                const content = document.getElementById('essayContent').value.trim();
+                
+                if (!content) {
+                    showError({
+                        error: 'EMPTY_CONTENT',
+                        message: '请输入作文内容',
+                        details: {
+                            suggestion: '请粘贴英语作文内容后再提交'
+                        }
+                    });
+                    return;
+                }
+                
                 // 显示加载动画
                 document.getElementById('loading').style.display = 'block';
                 
                 try {
-                    // 获取作文内容
-                    const content = document.getElementById('content').value;
                     // 发送POST请求到后端
                     const response = await fetch('/api/essays', {
                         method: 'POST',
@@ -218,6 +278,11 @@
                     // 解析响应数据
                     const data = await response.json();
                     
+                    if (!response.ok) {
+                        showError(data);
+                        return;
+                    }
+
                     // 显示评分结果
                     document.getElementById('score').textContent = data.score;
                     // 使用Marked.js渲染Markdown格式的优点和建议
@@ -231,7 +296,13 @@
                     
                 } catch (error) {
                     console.error('提交失败：', error);
-                    alert('提交失败，请重试');
+                    showError({
+                        error: 'NETWORK_ERROR',
+                        message: '网络连接错误',
+                        details: {
+                            suggestion: '请检查网络连接后重试'
+                        }
+                    });
                 } finally {
                     // 隐藏加载动画
                     document.getElementById('loading').style.display = 'none';
@@ -329,6 +400,44 @@
         
         // 初始加载历史记录
         loadHistory();
+
+        function showError(error) {
+            const errorCard = document.getElementById('errorCard');
+            const errorTitle = document.getElementById('errorTitle');
+            const errorMessage = document.getElementById('errorMessage');
+            const errorSuggestion = document.getElementById('errorSuggestion');
+            
+            // 设置错误标题
+            switch (error.error) {
+                case 'INVALID_LANGUAGE':
+                    errorTitle.textContent = '语言错误';
+                    break;
+                case 'EMPTY_CONTENT':
+                    errorTitle.textContent = '内容为空';
+                    break;
+                case 'NETWORK_ERROR':
+                    errorTitle.textContent = '网络错误';
+                    break;
+                case 'PROCESSING_ERROR':
+                    errorTitle.textContent = '处理错误';
+                    break;
+                case 'AI_SERVICE_ERROR':
+                    errorTitle.textContent = 'AI服务错误';
+                    break;
+                default:
+                    errorTitle.textContent = '系统错误';
+            }
+            
+            // 设置错误信息和建议
+            errorMessage.textContent = error.message || '发生未知错误';
+            errorSuggestion.textContent = error.details?.suggestion || '请稍后重试';
+            
+            // 显示错误卡片
+            errorCard.style.display = 'block';
+            
+            // 滚动到错误信息
+            errorCard.scrollIntoView({ behavior: 'smooth' });
+        }
     </script>
 </body>
 </html> 
