@@ -1,0 +1,27 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "PowerShell Admin": {
+            "path": "pwsh.exe",
+            "args": [
+                "-Command",
+                "Start-Process pwsh.exe -Verb RunAs"
+            ],
+            "icon": "terminal-powershell"
+        },
+        "PowerShell": {
+            "source": "PowerShell",
+            "icon": "terminal-powershell"
+        },
+        "Command Prompt": {
+            "path": "C:\\Windows\\System32\\cmd.exe",
+            "icon": "terminal-cmd"
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.env.windows": {
+        "LANG": "zh_CN.UTF-8"
+    },
+    "terminal.integrated.defaultEncoding": "utf8",
+    "terminal.integrated.gpuAcceleration": "on",
+    "terminal.integrated.shellIntegration.enabled": true
+}

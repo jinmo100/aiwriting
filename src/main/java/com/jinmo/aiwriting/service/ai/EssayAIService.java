@@ -19,16 +19,40 @@ public class EssayAIService {
     private final ObjectMapper objectMapper;
 
     private String cleanJsonResponse(String response) {
-        // 移除可能的Markdown代码块标记
-        response = response.replaceAll("```json\\s*", "").replaceAll("```\\s*$", "");
-        // 移除开头和结尾的空白字符
-        response = response.trim();
-        // 替换中文引号为英文引号
-        // response = response.replaceAll(""", "\"")
-        // .replaceAll(""", "\"")
-        // .replaceAll("'", "'")
-        // .replaceAll("'", "'");
-        return response;
+        try {
+            // 检测字符串编码
+            if (!isUtf8(response)) {
+                // 如果不是UTF-8，尝试转换
+                byte[] bytes = response.getBytes("ISO-8859-1");
+                response = new String(bytes, "UTF-8");
+            }
+
+            // 移除可能的Markdown代码块标记
+            response = response.replaceAll("```json\\s*", "").replaceAll("```\\s*$", "");
+
+            // 移除开头和结尾的空白字符
+            response = response.trim();
+
+            // 处理JSON中的特殊字符
+            response = response.replaceAll("\\\\n", "\n").replaceAll("\\\\r", "\r")
+                    .replaceAll("\\\\t", "\t");
+
+            return response;
+        } catch (Exception e) {
+            log.error("清理JSON响应时出错", e);
+            return response;
+        }
+    }
+
+    // 检测字符串是否为UTF-8编码
+    private boolean isUtf8(String str) {
+        try {
+            byte[] bytes = str.getBytes();
+            String test = new String(bytes, "UTF-8");
+            return str.equals(test);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public EssayAnalysis analyzeEssay(String content) {
@@ -60,11 +84,12 @@ public class EssayAIService {
                         }
 
                         注意事项：
-                        1. strengths和suggestions必须是数组格式，使用[]包裹
-                        2. 每个优点和建议都必须是完整的中文句子
-                        3. 每个优点和建议都必须包含具体的文本示例
-                        4. 不要使用Markdown格式的列表符号
-                        5. 不要在JSON中使用多余的换行和缩进
+                        1. 必须返回标准UTF-8编码的JSON
+                        2. strengths和suggestions必须是数组格式，使用[]包裹
+                        3. 每个优点和建议都必须是完整的中文句子
+                        4. 每个优点和建议都必须包含具体的文本示例
+                        5. 不要使用Markdown格式的列表符号
+                        6. 不要在JSON中使用多余的换行和缩进
 
                         优点示例：
                         "文章用词准确，恰当使用了学术词汇，如使用'consequently'作为逻辑连接词，'phenomenon'描述自然现象"

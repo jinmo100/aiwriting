@@ -17,11 +17,18 @@ tasks.withType(JavaExec) {
     jvmArgs = [
         '-XX:+UseZGC',              // 启用ZGC
         '-XX:+ZGenerational',       // 启用分代ZGC
-        '-Xmx2g',                 // 设置最大堆内存
+        '-Xmx2g',                   // 设置最大堆内存为2GB
         '-XX:+UseCompressedOops',   // 启用指针压缩
         '-XX:+UseCompressedClassPointers',
+        '-Dfile.encoding=UTF-8',    // 设置文件编码
+        '-Dconsole.encoding=UTF-8', // 设置控制台编码
+        '-Dspring.output.ansi.enabled=ALWAYS', // 启用ANSI颜色输出
         '-XX:+HeapDumpOnOutOfMemoryError'  // OOM时生成堆转储
     ]
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
 configurations {

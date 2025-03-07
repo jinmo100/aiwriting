@@ -3,6 +3,8 @@ package com.jinmo.aiwriting.service.ai;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jinmo.aiwriting.service.ai.strategy.GeminiRequestStrategy;
@@ -12,7 +14,9 @@ import org.springframework.ai.chat.ChatClient;
 import org.springframework.ai.chat.ChatResponse;
 import org.springframework.ai.chat.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -88,41 +92,39 @@ public class OpenRouterClient implements ChatClient {
                     options.put("temperature", 0.7);
                     options.put("max_tokens", 2048);
 
-                    Map<String, Object> requestBody =
-                            strategy.buildRequestBody(model, prompt.getInstructions(), options);
+                    Map<String, Object> requestBody = strategy.buildRequestBody(model, prompt.getInstructions(), options);
 
                     // 修正API端点URL
                     String apiUrl = baseUrl + "/chat/completions";
-                    log.debug("Sending request to: {}", apiUrl);
-                    log.debug("Request body: {}", objectMapper.writeValueAsString(requestBody));
 
-                    // 打印请求的所有信息
-                    log.info("curl {} \\\n" +
-                            "  -H \"Content-Type: application/json\" \\\n" +
-                            "  -H \"Authorization: Bearer {}\" \\\n" +
-                            "  -H \"HTTP-Referer: {}\" \\\n" +
-                            "  -H \"X-Title: {}\" \\\n" +
-                            "  -H \"User-Agent: {}\" \\\n" +
-                            "  -d '{}'",
-                            apiUrl,
-                            apiKey,
-                            "http://localhost:8080",
-                            "AI Essay Grading System", 
-                            "Spring AI",
-                            objectMapper.writeValueAsString(requestBody));
+                    // 设置请求头，添加编码相关设置
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
+                    headers.set("Authorization", "Bearer " + apiKey);
+                    headers.set("HTTP-Referer", "http://localhost:8080");
+                    headers.set("X-Title", "AI Essay Grading System");
+                    headers.set("User-Agent", "Spring AI");
+                    headers.set("Accept-Charset", "UTF-8");
+                    headers.setAcceptCharset(List.of(Charset.forName("UTF-8")));
 
-                    // 发送请求
-                    ResponseEntity<Map> response =
-                            restTemplate.postForEntity(apiUrl, requestBody, Map.class);
+                    // 创建请求实体
+                    HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+
+                    // 使用RestTemplate发送请求
+                    ResponseEntity<Map> response = restTemplate.exchange(
+                        apiUrl,
+                        HttpMethod.POST,
+                        requestEntity,
+                        Map.class
+                    );
 
                     if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
                         throw new RuntimeException("Failed to get response from OpenRouter");
                     }
 
-                    // 处理响应
+                    // 处理响应，确保UTF-8编码
                     Map responseBody = response.getBody();
-                    List<Map<String, Object>> choices =
-                            (List<Map<String, Object>>) responseBody.get("choices");
+                    List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
                     if (choices == null || choices.isEmpty()) {
                         throw new RuntimeException("No response choices available");
                     }
@@ -131,19 +133,22 @@ public class OpenRouterClient implements ChatClient {
                     Map<String, String> message = (Map<String, String>) choice.get("message");
                     String content = message.get("content");
 
+                    // 确保内容是UTF-8编码
+                    byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
+                    content = new String(bytes, StandardCharsets.UTF_8);
+
                     // 创建Generation并返回ChatResponse
                     List<Generation> generations = List.of(new Generation(content));
                     return new ChatResponse(generations);
 
                 } catch (Exception e) {
-                    log.error("Error calling OpenRouter API (Attempt {}): {}",
-                            context.getRetryCount(), e.getMessage());
+                    log.error("Error calling OpenRouter API (Attempt {}): {}", context.getRetryCount(), e.getMessage());
                     throw e;
                 }
             });
-        } catch (JsonProcessingException e) {
-            log.error("Error processing JSON response: {}", e.getMessage());
-            throw new RuntimeException("Error processing JSON response", e);
+        } catch (Exception e) {
+            log.error("Error in OpenRouter API call: {}", e.getMessage());
+            throw new RuntimeException("Error in OpenRouter API call", e);
         }
     }
 }
