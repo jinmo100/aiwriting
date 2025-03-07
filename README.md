@@ -173,6 +173,8 @@ src/main/java/com/jinmo/aiwriting/
 
 ## 开发计划
 
+- [ ] 重构错误处理体系，使用统一异常对象处理
+- [ ] 重构前端，不在使用bootstrap
 - [ ] 支持一键多模型切换
 - [ ] 支持 MySQL 数据库
 - [ ] 添加用户认证
