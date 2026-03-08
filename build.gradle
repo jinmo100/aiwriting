@@ -51,7 +51,7 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     // API文档
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.4'
 
     // 工具库
     implementation 'com.fasterxml.jackson.core:jackson-databind'
