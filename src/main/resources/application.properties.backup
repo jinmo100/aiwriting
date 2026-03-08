@@ -1,0 +1,65 @@
+# 应用配置
+spring.application.name=aiwriting
+server.port=8080
+
+# H2配置
+spring.datasource.url=jdbc:h2:mem:aiwriting
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+
+# JPA配置
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# H2 Console
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# OpenRouter配置
+openrouter.base-url=https://openrouter.ai/api/v1
+#openrouter.model=openai/gpt-3.5-turbo
+#openrouter.model=google/gemini-2.0-pro-exp-02-05:free
+openrouter.model=google/gemma-2-9b-it:free
+
+# OpenRouter请求头
+openrouter.headers.HTTP-Referer=http://localhost:8080
+openrouter.headers.X-Title=AI Essay Grading System
+openrouter.headers.User-Agent=Spring AI
+
+# 重试配置
+spring.ai.retry.max-attempts=3
+spring.ai.retry.initial-interval=2000
+spring.ai.retry.multiplier=2
+spring.ai.retry.max-interval=10000
+
+# 引入密钥配置
+spring.config.import=optional:config/application-secrets.properties
+
+# 日志配置
+logging.level.com.jinmo.aiwriting=DEBUG
+logging.level.org.springframework.ai=DEBUG
+logging.level.org.springframework.web.client=DEBUG
+
+# 日志格式
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{15}) - %msg%n
+
+# Native Image配置
+spring.aot.enabled=true
+spring.native.remove-yaml-support=true
+
+# JVM参数配置（用于java -jar方式运行）
+spring.jvm.args=-XX:+UseZGC -XX:+ZGenerational -Xmx2g -XX:+UseCompressedOops \
+  -XX:+UseCompressedClassPointers -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8
+
+# 添加编码配置
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.force=true
+spring.messages.encoding=UTF-8
+spring.mandatory-file-encoding=UTF-8
+spring.http.encoding.charset=UTF-8
+spring.http.encoding.enabled=true
+spring.http.encoding.force=true
+console.encoding=UTF-8
+file.encoding=UTF-8
