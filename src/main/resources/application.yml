@@ -5,8 +5,8 @@ spring:
   # 数据源配置
   datasource:
     url: jdbc:postgresql://localhost:5432/aiwriting
-    username: aiwriting
-    password: aiwriting123
+    username: devuser
+    password: devpassword
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
