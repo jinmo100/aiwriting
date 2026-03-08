@@ -18,7 +18,8 @@ public class ModelFactory {
      * 根据配置创建AI模型
      */
     public ChatLanguageModel createModel(ApiConfig config) {
-        log.info("创建AI模型: provider={}, model={}", config.getProvider(), config.getModelName());
+        log.info("创建AI模型: provider={}, model={}, baseUrl={}",
+            config.getProvider(), config.getModelName(), config.getBaseUrl());
 
         return OpenAiChatModel.builder()
             .baseUrl(config.getBaseUrl())
