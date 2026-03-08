@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aiwriting-db
+    environment:
+      POSTGRES_DB: aiwriting
+      POSTGRES_USER: aiwriting
+      POSTGRES_PASSWORD: aiwriting123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - aiwriting-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiwriting"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: aiwriting-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/aiwriting
+      SPRING_DATASOURCE_USERNAME: aiwriting
+      SPRING_DATASOURCE_PASSWORD: aiwriting123
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - aiwriting-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    container_name: aiwriting-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - aiwriting-network
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  aiwriting-network:
+    driver: bridge

@@ -1,34 +1,16 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.2.3'
+    id 'org.springframework.boot' version '3.4.2'
     id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.graalvm.buildtools.native' version '0.10.5'
 }
 
 group = 'com.jinmo'
-version = '0.0.1-SNAPSHOT'
+version = '2.0.0-SNAPSHOT'
 
 java {
-    sourceCompatibility = '21'
-}
-
-// 添加JVM参数配置
-tasks.withType(JavaExec) {
-    jvmArgs = [
-        '-XX:+UseZGC',              // 启用ZGC
-        '-XX:+ZGenerational',       // 启用分代ZGC
-        '-Xmx2g',                   // 设置最大堆内存为2GB
-        '-XX:+UseCompressedOops',   // 启用指针压缩
-        '-XX:+UseCompressedClassPointers',
-        '-Dfile.encoding=UTF-8',    // 设置文件编码
-        '-Dconsole.encoding=UTF-8', // 设置控制台编码
-        '-Dspring.output.ansi.enabled=ALWAYS', // 启用ANSI颜色输出
-        '-XX:+HeapDumpOnOutOfMemoryError'  // OOM时生成堆转储
-    ]
-}
-
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 configurations {
@@ -39,39 +21,56 @@ configurations {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://repo.spring.io/milestone") }
-    maven { url = uri("https://repo.spring.io/snapshot") }
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+ext {
+    langchain4jVersion = '0.36.2'
 }
 
 dependencies {
-    // 核心依赖
+    // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    
-    // Spring AI - 使用最新的快照版本
-//    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:0.8.0'
-    implementation 'org.springframework.ai:spring-ai-core:0.8.0'
-    
-    // Spring Retry
-    implementation 'org.springframework.retry:spring-retry'
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
-    
-    // H2数据库
+
+    // MyBatis-Plus
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.9'
+    // 分页插件依赖（3.5.9版本需要单独引入）
+    implementation 'com.baomidou:mybatis-plus-jsqlparser:3.5.9'
+
+    // LangChain4j - AI集成框架
+    implementation "dev.langchain4j:langchain4j:${langchain4jVersion}"
+    implementation "dev.langchain4j:langchain4j-open-ai:${langchain4jVersion}"
+
+    // 数据库
+    runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'com.h2database:h2'
-    
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    
-    // 测试依赖
+
+    // API文档
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
+    // 工具库
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // 测试
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
 
-    // 添加Thymeleaf依赖
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// JAR包名称
+bootJar {
+    archiveFileName = "${archiveBaseName.get()}.${archiveExtension.get()}"
 }

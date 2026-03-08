@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aiwriting}
+    username: ${DB_USER:aiwriting}
+    password: ${DB_PASSWORD:aiwriting123}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+
+logging:
+  level:
+    root: INFO
+    com.jinmo.aiwriting: INFO

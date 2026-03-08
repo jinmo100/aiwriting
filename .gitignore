@@ -41,7 +41,38 @@ out/
 # 忽略包含密钥的配置文件
 src/main/resources/config/application-secrets.properties
 
-
 .fastRequest/
 
 .specstory
+
+### 编译和调试输出 ###
+# Gradle编译输出日志
+build_output.log
+compile_result.txt
+*.log
+
+### Claude Code 工具输出 ###
+# Claude Code工具结果输出目录
+.claude/projects/*/tool-results/
+.claude/projects/*/memory/
+
+### 操作系统生成文件 ###
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+### 前端构建输出 ###
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+frontend/.npm/

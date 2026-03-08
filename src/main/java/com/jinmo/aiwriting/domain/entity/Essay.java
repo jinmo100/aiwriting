@@ -1,33 +1,25 @@
 package com.jinmo.aiwriting.domain.entity;
 
-import jakarta.persistence.*;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+/**
+ * 作文实体
+ */
 @Data
-@Entity
-@Table(name = "essays")
+@TableName("essays")
 public class Essay {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @TableId(type = IdType.AUTO)
     private Long id;
-    
-    @Column(columnDefinition = "TEXT")
+
     private String content;
-    
-    private Integer score;
-    
-    @Column(columnDefinition = "TEXT")
-    private String strengths;
-    
-    @Column(columnDefinition = "TEXT")
-    private String suggestions;
-    
-    @Column(updatable = false)
+
+    private Integer wordCount;
+
+    private String essayType;  // IELTS, TOEFL, CET4, CET6
+
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
-    
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
-} 
+}

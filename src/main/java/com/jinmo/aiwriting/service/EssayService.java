@@ -1,94 +1,152 @@
 package com.jinmo.aiwriting.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import com.jinmo.aiwriting.common.exception.AIServiceException;
-import com.jinmo.aiwriting.common.exception.ResourceNotFoundException;
-import com.jinmo.aiwriting.domain.dto.EssayRequest;
-import com.jinmo.aiwriting.domain.dto.EssayResponse;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jinmo.aiwriting.ai.AIService;
+import com.jinmo.aiwriting.common.exception.BusinessException;
+import com.jinmo.aiwriting.domain.dto.EssayScoreResponse;
+import com.jinmo.aiwriting.domain.dto.EssaySubmitRequest;
+import com.jinmo.aiwriting.domain.dto.ScoringResult;
+import com.jinmo.aiwriting.domain.entity.ApiConfig;
 import com.jinmo.aiwriting.domain.entity.Essay;
-import com.jinmo.aiwriting.repository.EssayRepository;
-import com.jinmo.aiwriting.service.ai.EssayAIService;
-import com.jinmo.aiwriting.service.ai.EssayAnalysis;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import com.jinmo.aiwriting.domain.entity.EssayScore;
+import com.jinmo.aiwriting.mapper.ApiConfigMapper;
+import com.jinmo.aiwriting.mapper.EssayMapper;
+import com.jinmo.aiwriting.mapper.EssayScoreMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
 
+/**
+ * 作文服务
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EssayService {
 
-    private final EssayRepository essayRepository;
-    private final EssayAIService essayAIService;
+    private final EssayMapper essayMapper;
+    private final EssayScoreMapper essayScoreMapper;
+    private final ApiConfigMapper apiConfigMapper;
+    private final AIService aiService;
+    private final ObjectMapper objectMapper;
 
+    /**
+     * 提交作文并评分
+     */
     @Transactional
-    public EssayResponse submitEssay(EssayRequest request) {
-        try {
-            // 分析作文
-            EssayAnalysis analysis = essayAIService.analyzeEssay(request.content());
+    public EssayScoreResponse submitAndScore(EssaySubmitRequest request) {
+        log.info("提交作文，字数: {}", request.content().split("\\s+").length);
 
-            // 创建新的Essay实体
-            Essay essay = new Essay();
-            essay.setContent(request.content());
-            essay.setScore(analysis.score());
-            essay.setStrengths(String.join("\n- ", analysis.strengths()));
-            essay.setSuggestions(String.join("\n- ", analysis.suggestions()));
-
-            // 保存到数据库
-            essay = essayRepository.save(essay);
-
-            return EssayResponse.fromEntity(essay);
-        } catch (AIServiceException e) {
-            // 直接抛出AI服务异常，让全局异常处理器处理
-            throw e;
-        } catch (Exception e) {
-            throw new AIServiceException("""
-                    {
-                        "error": "PROCESSING_ERROR",
-                        "message": "作文处理失败",
-                        "details": {
-                            "reason": "服务器处理错误",
-                            "suggestion": "请稍后重试"
-                        }
-                    }""");
+        // 获取配置
+        ApiConfig config;
+        if (request.configId() != null) {
+            config = apiConfigMapper.selectById(request.configId());
+            if (config == null) {
+                throw new BusinessException("指定的配置不存在");
+            }
+        } else {
+            // 使用默认配置
+            config = apiConfigMapper.selectOne(
+                new LambdaQueryWrapper<ApiConfig>()
+                    .eq(ApiConfig::getIsDefault, true)
+            );
+            if (config == null) {
+                throw new BusinessException("请先配置API并设置为默认");
+            }
         }
-    }
 
-    public EssayResponse getEssay(Long id) {
-        return essayRepository.findById(id).map(EssayResponse::fromEntity)
-                .orElseThrow(() -> new ResourceNotFoundException("作文不存在"));
-    }
+        // 保存作文
+        Essay essay = new Essay();
+        essay.setContent(request.content());
+        essay.setEssayType(request.essayType());
+        essayMapper.insert(essay);
 
-    public List<EssayResponse> getAllEssays() {
-        return essayRepository.findAll().stream().map(EssayResponse::fromEntity)
-                .collect(Collectors.toList());
+        // AI评分
+        long startTime = System.currentTimeMillis();
+        ScoringResult result = aiService.scoreEssay(request.content(), config);
+        long duration = System.currentTimeMillis() - startTime;
+
+        // 保存评分结果
+        EssayScore score = new EssayScore();
+        score.setEssayId(essay.getId());
+        score.setApiConfigId(config.getId());
+        score.setOverallScore(result.overallScore());
+        score.setContentScore(result.contentScore());
+        score.setLanguageScore(result.languageScore());
+        score.setStructureScore(result.structureScore());
+        score.setCoherenceScore(result.coherenceScore());
+        score.setAiModel(config.getModelName());
+        score.setProcessingTime((int) duration);
+
+        try {
+            score.setStrengths(objectMapper.writeValueAsString(result.strengths()));
+            score.setSuggestions(objectMapper.writeValueAsString(result.suggestions()));
+            score.setErrors(objectMapper.writeValueAsString(result.errors()));
+            score.setDetailedFeedback(result.detailedFeedback());
+        } catch (JsonProcessingException e) {
+            log.error("序列化评分详情失败", e);
+        }
+
+        essayScoreMapper.insert(score);
+
+        // 返回结果
+        return new EssayScoreResponse(
+            essay.getId(),
+            new EssayScoreResponse.ScoreDetail(
+                score.getOverallScore(),
+                score.getContentScore(),
+                score.getLanguageScore(),
+                score.getStructureScore(),
+                score.getCoherenceScore(),
+                result.strengths(),
+                result.suggestions(),
+                result.errors().stream()
+                    .map(error -> new EssayScoreResponse.ErrorDetail(
+                        error.sentence(),
+                        error.type(),
+                        error.description(),
+                        error.correction()
+                    ))
+                    .toList(),
+                score.getDetailedFeedback()
+            ),
+            score.getProcessingTime()
+        );
     }
 
     /**
-     * 分页获取作文历史
-     * 
-     * @param page 页码（从0开始）
-     * @param size 每页大小
-     * @return 分页结果
+     * 分页查询历史
      */
-    public Page<EssayResponse> getEssayHistory(int page, int size) {
-        PageRequest pageRequest =
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return essayRepository.findAll(pageRequest).map(EssayResponse::fromEntity);
+    public Page<Essay> getHistory(int page, int size) {
+        return essayMapper.selectPage(
+            new Page<>(page, size),
+            new LambdaQueryWrapper<Essay>()
+                .orderByDesc(Essay::getCreatedAt)
+        );
     }
 
     /**
      * 获取作文详情
-     * 
-     * @param id 作文ID
-     * @return 作文详情
-     * @throws ResourceNotFoundException 如果作文不存在
      */
-    public EssayResponse getEssayDetail(Long id) {
-        return essayRepository.findById(id).map(EssayResponse::fromEntity)
-                .orElseThrow(() -> new ResourceNotFoundException("作文不存在: " + id));
+    public Essay getEssay(Long id) {
+        Essay essay = essayMapper.selectById(id);
+        if (essay == null) {
+            throw new BusinessException("作文不存在");
+        }
+        return essay;
+    }
+
+    /**
+     * 获取评分详情
+     */
+    public EssayScore getScore(Long essayId) {
+        return essayScoreMapper.selectOne(
+            new LambdaQueryWrapper<EssayScore>()
+                .eq(EssayScore::getEssayId, essayId)
+        );
     }
 }
