@@ -19,7 +19,7 @@
 ```yaml
 语言：Java 21
 框架：Spring Boot 3.4.x
-数据：Spring Data JPA + PostgreSQL 16
+数据：Mybatis Plus + PostgreSQL 16
 AI集成：LangChain4j 0.36.x
 工具：Lombok, SpringDoc OpenAPI 3.x
 构建：Gradle 8.x (Kotlin DSL)

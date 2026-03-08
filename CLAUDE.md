@@ -61,12 +61,11 @@ chmod +x run.sh
 2. **Service层** (`service/`): 业务逻辑处理
    - `service/ai/`: AI服务相关（OpenRouter客户端、作文分析）
    - `service/`: 作文业务逻辑
-3. **Repository层** (`repository/`): 数据访问层，使用Spring Data JPA
-4. **Domain层** (`domain/`): 领域模型
+3.**Domain层** (`domain/`): 领域模型
    - `domain/entity/`: JPA实体类
    - `domain/dto/`: 数据传输对象（使用record）
-5. **Config层** (`config/`): 配置类（OpenRouter、重试策略等）
-6. **Common层** (`common/`): 公共组件
+4.**Config层** (`config/`): 配置类（OpenRouter、重试策略等）
+5.**Common层** (`common/`): 公共组件
    - `common/exception/`: 异常定义和全局异常处理
    - `common/response/`: 统一响应封装
 
