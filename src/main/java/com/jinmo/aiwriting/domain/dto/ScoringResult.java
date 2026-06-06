@@ -1,5 +1,7 @@
 package com.jinmo.aiwriting.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import java.util.List;
 
 /**
@@ -21,5 +23,10 @@ public record ScoringResult(
         String type,
         String description,
         String correction
-    ) {}
+    ) {
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        public ErrorDetail(String description) {
+            this("", "STYLE", description, "");
+        }
+    }
 }

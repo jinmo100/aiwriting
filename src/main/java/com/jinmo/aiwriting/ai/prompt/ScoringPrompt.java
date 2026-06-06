@@ -43,10 +43,12 @@ public class ScoringPrompt {
 
         注意事项：
         1. strengths和suggestions各至少提供2-3条
-        2. errors如有发现语法错误则列出，没有则返回空数组
-        3. detailedFeedback提供整体评价，100-200字
-        4. 评分要客观公正，符合评分标准
-        5. 必须返回纯JSON，不要包含Markdown代码块标记
+        2. errors如有发现语法、拼写、标点、词汇、表达、结构等问题则列出，没有则返回空数组
+        3. errors数组的每个元素必须是对象，不能是字符串；对象必须包含sentence、type、description、correction四个字段
+        4. type只能使用：GRAMMAR、SPELLING、PUNCTUATION、VOCABULARY、COLLOCATION、STYLE、CLARITY、COHERENCE、TASK_RESPONSE、STRUCTURE
+        5. detailedFeedback提供整体评价，100-200字
+        6. 评分要客观公正，符合评分标准
+        7. 必须返回纯JSON，不要包含Markdown代码块标记
 
         待评分作文：
         """;

@@ -150,7 +150,22 @@ public class AIService {
                 "coherenceScore": {"type": "number"},
                 "strengths": {"type": "array", "items": {"type": "string"}},
                 "suggestions": {"type": "array", "items": {"type": "string"}},
-                "errors": {"type": "array"},
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["sentence", "type", "description", "correction"],
+                    "properties": {
+                      "sentence": {"type": "string"},
+                      "type": {
+                        "type": "string",
+                        "enum": ["GRAMMAR", "SPELLING", "PUNCTUATION", "VOCABULARY", "COLLOCATION", "STYLE", "CLARITY", "COHERENCE", "TASK_RESPONSE", "STRUCTURE"]
+                      },
+                      "description": {"type": "string"},
+                      "correction": {"type": "string"}
+                    }
+                  }
+                },
                 "detailedFeedback": {"type": "string"}
               }
             }
