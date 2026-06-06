@@ -1,16 +1,20 @@
 package com.jinmo.aiwriting.domain.dto;
 
+import com.jinmo.aiwriting.ai.provider.ProviderType;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 /**
- * API配置请求DTO
+ * API 配置创建请求。创建时 API Key 必填。
  */
-public record ApiConfigRequest(
+public record ApiConfigCreateRequest(
     @NotBlank(message = "配置名称不能为空")
     String configName,
 
-    @NotBlank(message = "提供商不能为空")
-    String provider,
+    @NotNull(message = "提供商类型不能为空")
+    ProviderType providerType,
+
+    String providerLabel,
 
     @NotBlank(message = "API基础URL不能为空")
     String baseUrl,
@@ -21,6 +25,10 @@ public record ApiConfigRequest(
     @NotBlank(message = "模型名称不能为空")
     String modelName,
 
+    Double temperature,
+    Integer maxTokens,
+    Integer timeoutSeconds,
+    String modelParametersJson,
     Boolean isDefault
 ) {
 }

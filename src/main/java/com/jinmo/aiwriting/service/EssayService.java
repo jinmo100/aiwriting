@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.regex.Pattern;
+
 /**
  * 作文服务
  */
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class EssayService {
+    private static final Pattern ENGLISH_WORD_PATTERN = Pattern.compile("[A-Za-z]+(?:[-'][A-Za-z]+)?");
 
     private final EssayMapper essayMapper;
     private final EssayScoreMapper essayScoreMapper;
@@ -62,6 +65,7 @@ public class EssayService {
         // 保存作文
         Essay essay = new Essay();
         essay.setContent(request.content());
+        essay.setWordCount(countWords(request.content()));
         essay.setEssayType(request.essayType());
         essayMapper.insert(essay);
 
@@ -122,11 +126,13 @@ public class EssayService {
      * 分页查询历史
      */
     public Page<Essay> getHistory(int page, int size) {
-        return essayMapper.selectPage(
+        Page<Essay> result = essayMapper.selectPage(
             new Page<>(page, size),
             new LambdaQueryWrapper<Essay>()
                 .orderByDesc(Essay::getCreatedAt)
         );
+        result.getRecords().forEach(this::fillWordCountIfMissing);
+        return result;
     }
 
     /**
@@ -137,6 +143,7 @@ public class EssayService {
         if (essay == null) {
             throw new BusinessException("作文不存在");
         }
+        fillWordCountIfMissing(essay);
         return essay;
     }
 
@@ -148,5 +155,23 @@ public class EssayService {
             new LambdaQueryWrapper<EssayScore>()
                 .eq(EssayScore::getEssayId, essayId)
         );
+    }
+
+    static int countWords(String content) {
+        if (content == null || content.isBlank()) {
+            return 0;
+        }
+        var matcher = ENGLISH_WORD_PATTERN.matcher(content);
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
+    private void fillWordCountIfMissing(Essay essay) {
+        if (essay != null && essay.getWordCount() == null) {
+            essay.setWordCount(countWords(essay.getContent()));
+        }
     }
 }

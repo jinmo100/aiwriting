@@ -1,16 +1,26 @@
 package com.jinmo.aiwriting.controller;
 
 import com.jinmo.aiwriting.common.response.ApiResponse;
-import com.jinmo.aiwriting.domain.dto.ApiConfigRequest;
+import com.jinmo.aiwriting.common.exception.BusinessException;
+import com.jinmo.aiwriting.domain.dto.ApiConfigCreateRequest;
 import com.jinmo.aiwriting.domain.dto.ApiConfigResponse;
+import com.jinmo.aiwriting.domain.dto.ApiConfigUpdateRequest;
+import com.jinmo.aiwriting.domain.dto.ProviderModelsFetchRequest;
+import com.jinmo.aiwriting.domain.dto.ProviderModelsResponse;
+import com.jinmo.aiwriting.domain.dto.ProviderTestRequest;
+import com.jinmo.aiwriting.domain.dto.ProviderTestResponse;
 import com.jinmo.aiwriting.service.ApiConfigService;
+import com.jinmo.aiwriting.service.ProviderModelService;
+import com.jinmo.aiwriting.service.ProviderTestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * API配置控制器
@@ -22,10 +32,15 @@ import java.util.List;
 public class ApiConfigController {
 
     private final ApiConfigService apiConfigService;
+    private final ProviderModelService providerModelService;
+    private final ProviderTestService providerTestService;
+
+    @Value("${aiwriting.security.allow-api-key-reveal:false}")
+    private boolean allowApiKeyReveal;
 
     @Operation(summary = "创建API配置")
     @PostMapping
-    public ApiResponse<ApiConfigResponse> createConfig(@Valid @RequestBody ApiConfigRequest request) {
+    public ApiResponse<ApiConfigResponse> createConfig(@Valid @RequestBody ApiConfigCreateRequest request) {
         return ApiResponse.success("创建成功", apiConfigService.createConfig(request));
     }
 
@@ -33,6 +48,12 @@ public class ApiConfigController {
     @GetMapping
     public ApiResponse<List<ApiConfigResponse>> getAllConfigs() {
         return ApiResponse.success(apiConfigService.getAllConfigs());
+    }
+
+    @Operation(summary = "获取配置页安全策略")
+    @GetMapping("/security-policy")
+    public ApiResponse<Map<String, Boolean>> getSecurityPolicy() {
+        return ApiResponse.success(Map.of("allowApiKeyReveal", allowApiKeyReveal));
     }
 
     @Operation(summary = "获取配置详情")
@@ -45,9 +66,57 @@ public class ApiConfigController {
     @PutMapping("/{id}")
     public ApiResponse<ApiConfigResponse> updateConfig(
         @PathVariable Long id,
-        @Valid @RequestBody ApiConfigRequest request
+        @Valid @RequestBody ApiConfigUpdateRequest request
     ) {
         return ApiResponse.success("更新成功", apiConfigService.updateConfig(id, request));
+    }
+
+    @Operation(summary = "显示完整 API Key（仅允许环境）")
+    @PostMapping("/{id}/reveal-api-key")
+    public ApiResponse<Map<String, String>> revealApiKey(@PathVariable Long id) {
+        if (!allowApiKeyReveal) {
+            throw new BusinessException("当前环境不允许查看完整 API Key");
+        }
+        return ApiResponse.success(Map.of("apiKey", apiConfigService.revealApiKey(id)));
+    }
+
+    @Operation(summary = "使用未保存配置获取模型列表")
+    @PostMapping("/models/fetch")
+    public ApiResponse<ProviderModelsResponse> fetchModels(@Valid @RequestBody ProviderModelsFetchRequest request) {
+        return ApiResponse.success(providerModelService.fetchModels(request));
+    }
+
+    @Operation(summary = "使用已保存配置获取模型列表")
+    @PostMapping("/{id}/models/fetch")
+    public ApiResponse<ProviderModelsResponse> fetchModelsByConfig(
+        @PathVariable Long id,
+        @RequestParam(defaultValue = "false") boolean forceRefresh
+    ) {
+        return ApiResponse.success(providerModelService.fetchModels(id, forceRefresh));
+    }
+
+    @Operation(summary = "使用未保存配置测试连接")
+    @PostMapping("/test-connection")
+    public ApiResponse<ProviderTestResponse> testConnection(@Valid @RequestBody ProviderTestRequest request) {
+        return ApiResponse.success(providerTestService.testConnection(request));
+    }
+
+    @Operation(summary = "使用已保存配置测试连接")
+    @PostMapping("/{id}/test-connection")
+    public ApiResponse<ProviderTestResponse> testConnectionByConfig(@PathVariable Long id) {
+        return ApiResponse.success(providerTestService.testConnection(id));
+    }
+
+    @Operation(summary = "使用未保存配置测试结构化输出")
+    @PostMapping("/test-structured-output")
+    public ApiResponse<ProviderTestResponse> testStructuredOutput(@Valid @RequestBody ProviderTestRequest request) {
+        return ApiResponse.success(providerTestService.testStructuredOutput(request));
+    }
+
+    @Operation(summary = "使用已保存配置测试结构化输出")
+    @PostMapping("/{id}/test-structured-output")
+    public ApiResponse<ProviderTestResponse> testStructuredOutputByConfig(@PathVariable Long id) {
+        return ApiResponse.success(providerTestService.testStructuredOutput(id));
     }
 
     @Operation(summary = "删除配置")

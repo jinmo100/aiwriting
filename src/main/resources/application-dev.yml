@@ -1,35 +1,51 @@
 spring:
-#  datasource:
-#    url: jdbc:h2:mem:aiwriting_dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
-#    username: sa
-#    password:
-#    driver-class-name: org.h2.Driver
-#    hikari:
-#      maximum-pool-size: 5
-#      minimum-idle: 2
+  datasource:
+    # 默认连接本机 PostgreSQL。若通过 SSH 隧道访问远端数据库，请在 .env.dev.local 中覆盖 DEV_DB_HOST/DEV_DB_PORT。
+    url: jdbc:postgresql://${DEV_DB_HOST:localhost}:${DEV_DB_PORT:5432}/${DEV_DB_NAME:aiwriting}
+    username: ${DEV_DB_USER:aiwriting}
+    password: ${DEV_DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
 
-  # MyBatis-Plus配置 (开发环境)
-  mybatis-plus:
-    configuration:
-      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-    global-config:
-      db-config:
-        id-type: auto
+  data:
+    redis:
+      # 默认连接本机 Redis。带密码或远端连接请通过 DEV_REDIS_URL 覆盖。
+      url: ${DEV_REDIS_URL:redis://localhost:6379/0}
 
-  # H2控制台
-#  h2:
-#    console:
-#      enabled: true
-#      path: /h2-console
+  sql:
+    init:
+      mode: never
 
-  # JPA已弃用，使用MyBatis-Plus
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+
   jpa:
     hibernate:
       ddl-auto: none
     show-sql: false
 
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+
 logging:
   level:
     com.jinmo.aiwriting: DEBUG
     dev.langchain4j: DEBUG
-    org.apache.ibatis: DEBUG
+    org.apache.ibatis: WARN
+
+aiwriting:
+  security:
+    encryption-key: ${AIWRITING_SECRET_KEY:dev-only-aiwriting-secret-change-me}
+    allow-api-key-reveal: true

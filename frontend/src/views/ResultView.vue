@@ -33,7 +33,7 @@
 
         <div class="info-text">
           <p>处理耗时: {{ result.processingTime }}ms</p>
-          <p>使用模型: {{ essay?.aiModel || '未知' }}</p>
+          <p>使用模型: {{ result.score.aiModel || '未知' }}</p>
         </div>
       </el-card>
 
@@ -107,7 +107,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SuccessFilled, WarningFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { getEssayDetail } from '@/api/essay'
-import type { EssayScoreResponse, Essay } from '@/types'
+import type { EssayScoreResponse } from '@/types'
 
 const route = useRoute()
 const router = useRouter()

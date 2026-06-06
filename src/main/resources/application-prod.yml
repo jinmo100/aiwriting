@@ -2,12 +2,27 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aiwriting}
     username: ${DB_USER:aiwriting}
-    password: ${DB_PASSWORD:aiwriting123}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 10
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379/0}
+  sql:
+    init:
+      mode: never
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 logging:
   level:
     root: INFO
     com.jinmo.aiwriting: INFO
+    dev.langchain4j: INFO
+
+aiwriting:
+  security:
+    encryption-key: ${AIWRITING_SECRET_KEY}
+    allow-api-key-reveal: false

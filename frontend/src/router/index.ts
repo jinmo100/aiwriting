@@ -37,7 +37,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   document.title = (to.meta.title as string) || 'AI英语作文评分系统'
   next()
 })

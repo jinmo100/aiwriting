@@ -25,13 +25,15 @@ repositories {
 }
 
 ext {
-    langchain4jVersion = '0.36.2'
+    langchain4jVersion = '1.16.1'
+    langchain4jBetaVersion = '1.16.1-beta26'
 }
 
 dependencies {
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // MyBatis-Plus
     implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.9'
@@ -41,10 +43,18 @@ dependencies {
     // LangChain4j - AI集成框架
     implementation "dev.langchain4j:langchain4j:${langchain4jVersion}"
     implementation "dev.langchain4j:langchain4j-open-ai:${langchain4jVersion}"
+    implementation "dev.langchain4j:langchain4j-open-ai-official:${langchain4jBetaVersion}"
+    implementation "dev.langchain4j:langchain4j-anthropic:${langchain4jVersion}"
+    implementation "dev.langchain4j:langchain4j-google-ai-gemini:${langchain4jVersion}"
 
     // 数据库
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'com.h2database:h2'
+
+    // 缓存
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

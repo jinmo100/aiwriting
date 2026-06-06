@@ -1,323 +1,222 @@
-# AI英语作文评分系统 v2.0
+# AI 英语作文评分系统 v2.0
 
-一个基于 Spring Boot 3.4 + Vue 3 + LangChain4j 的现代化AI英语作文评分系统。
+基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j 1.16.1** 的 AI 英语作文评分系统。项目已从单一 OpenAI-compatible 调用演进为 **AI Provider 抽象层**，支持多协议 Provider、API Key 加密存储、模型列表拉取、连接测试、结构化输出测试和作文评分历史管理。
 
-## ✨ 特性
+## 当前状态
 
-- 🤖 **多模型支持** - 支持 OpenAI、Claude、Gemini、DeepSeek 等多种AI模型
-- 📊 **多维度评分** - 从内容、语言、结构、连贯性四个维度评分
-- 💡 **详细反馈** - 提供优点、建议、错误标注等详细反馈
-- 🔧 **灵活配置** - 用户可自定义API配置，支持多模型切换
-- 🐳 **容器化部署** - 完整的Docker支持，一键部署
+- 后端：Spring Boot 3.4.2、Java 21、MyBatis-Plus 3.5.9、Flyway、PostgreSQL、Redis、LangChain4j 1.16.1。
+- 前端：Vue 3、TypeScript、Element Plus、Vite、Pinia、Axios。
+- 开发环境默认：本机 PostgreSQL + 本机 Redis；不再使用 H2 作为日常开发数据库。
+- 可选环境：如数据库/Redis 在远端，可通过本地 `.env.dev.local` 覆盖连接参数，必要时手动启用 SSH 隧道脚本。
+- 本地访问：
+  - 后端：`http://127.0.0.1:8080`
+  - 前端开发服务：`http://127.0.0.1:5173`
+  - Swagger UI：`http://127.0.0.1:8080/swagger-ui.html`
 
-## 🛠️ 技术栈
+## 核心功能
+
+- 多 Provider 协议适配：`OPENAI_CHAT_COMPLETIONS`、`OPENAI_RESPONSES`、`ANTHROPIC_MESSAGES`、`GEMINI_GENERATE_CONTENT`。
+- API 配置管理：新增、编辑、删除、设置默认配置。
+- API Key 加密存储：新建/更新配置写入 `api_key_encrypted`，旧 `api_key` 字段仅兼容读取。
+- dev 环境可控 reveal：普通接口只返回 `hasApiKey` 和 `apiKeyPreview`。
+- Provider 测试：测试连接、测试结构化输出。
+- 模型列表拉取：支持已保存配置和未保存配置；Redis 缓存模型列表。
+- AI 评分：内容、语言、结构、连贯性四维评分，返回优点、建议、错误标注、详细评价。
+- 结构化输出校验：JSON 解析、本地字段校验、失败后 repair retry 一次。
+- 历史记录：保存作文、`wordCount`、作文类型、评分结果和处理耗时。
+
+## 技术栈
 
 ### 后端
-- Java 21
+
+- Java 21（通过 Gradle Toolchain 声明；仓库不固定个人 JDK 路径）
 - Spring Boot 3.4.2
-- MyBatis-Plus 3.5.9 (含 mybatis-plus-jsqlparser 分页插件)
-- LangChain4j 0.36.2
-- PostgreSQL 16 / H2 Database (开发环境)
+- MyBatis-Plus 3.5.9
+- Flyway 10.x
+- PostgreSQL
+- Redis / Spring Data Redis
+- LangChain4j 1.16.1 + OpenAI Official beta adapter
+- Caffeine 本地缓存
+- SpringDoc OpenAPI
+- Lombok
 
 ### 前端
-- Vue 3.4
+
+- Vue 3
 - TypeScript 5
-- Element Plus 2.6
+- Element Plus
 - Vite 5
+- Pinia
+- Axios
 
-## 📦 快速开始
+## 本地开发启动
 
-### 前置要求
-- JDK 21+
-- Node.js 18+
-- PostgreSQL 16+
-- Docker & Docker Compose（可选）
+### 1. 准备 PostgreSQL / Redis
 
-### 方式一：Docker部署（推荐）
+默认开发配置连接本机服务：
 
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd aiwriting
-
-# 2. 构建后端
-./gradlew build
-
-# 3. 启动所有服务
-docker-compose up -d
-
-# 4. 访问应用
-# 前端：http://localhost
-# 后端：http://localhost:8080
-# API文档：http://localhost:8080/swagger-ui.html
+```text
+PostgreSQL: localhost:5432 / database=aiwriting / user=aiwriting
+Redis:      redis://localhost:6379/0
 ```
 
-### 方式二：本地开发
+可以使用本机安装、Docker Compose 或自行准备的数据库。H2 控制台默认关闭，H2 不再作为当前开发链路。
 
-#### 后端启动
+### 2. 准备本地 env 文件
 
-```bash
-# 1. 创建数据库
-psql -U postgres
-CREATE DATABASE aiwriting;
-
-# 2. 执行初始化脚本
-psql -U postgres -d aiwriting -f src/main/resources/db/init.sql
-
-# 3. 启动后端
-./gradlew bootRun
+```powershell
+Copy-Item .env.dev.example .env.dev.local
+# 编辑 .env.dev.local，填入本机真实 DEV_DB_PASSWORD、DEV_REDIS_URL、AIWRITING_SECRET_KEY 等
 ```
 
-#### 前端启动
+`.env.dev.local` 已被 `.gitignore` 忽略，不要提交真实密码、API Key、私有远端地址或 SSH Key 路径。
 
-```bash
-# 1. 进入前端目录
+### 3. 启动后端
+
+```powershell
+.\scripts\start-backend-dev.ps1
+```
+
+该脚本会加载 `.env.dev.local`（如果存在），然后执行 `./gradlew.bat bootRun`。也可以直接运行：
+
+```powershell
+.\gradlew.bat bootRun
+```
+
+如需远端数据库/Redis，可在 `.env.dev.local` 中设置 `DEV_DB_HOST`、`DEV_DB_PORT`、`DEV_REDIS_URL` 等。只有明确需要 SSH 转发时才使用：
+
+```powershell
+.\scripts\start-backend-dev.ps1 -WithTunnel
+# 或单独启动隧道：
+.\scripts\start-vps-postgres-tunnel.ps1 -TunnelHost example.com -TunnelUser ubuntu -IdentityFile C:\path\to\id_rsa
+```
+
+隧道脚本没有仓库默认主机、用户名或私钥路径；这些值必须通过参数或环境变量显式提供。
+
+### 4. 启动前端
+
+```powershell
 cd frontend
-
-# 2. 安装依赖
 npm install
-
-# 3. 启动开发服务器
-npm run dev
-
-# 4. 访问 http://localhost:3000
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-## 📖 使用指南
+访问：`http://127.0.0.1:5173`
 
-### 1. 配置API
+## 配置 Provider
 
-首次使用需要配置AI模型的API：
+进入“API配置”页面新增配置：
 
-1. 访问"API配置"页面
-2. 点击"新增配置"
-3. 填写配置信息：
-   - **配置名称**: 自定义名称，如"OpenRouter Gemma"
-   - **提供商**: 选择提供商（OpenRouter、OpenAI等）
-   - **API Base URL**: API地址
-   - **API Key**: 你的API密钥
-   - **模型名称**: 使用的模型名称
-   - **设为默认**: 勾选后作为默认配置
+- 配置名称：自定义展示名称，例如 `OpenRouter`、`OpenAI`、`Gemini`。
+- Provider 类型：选择协议适配器。
+- Provider 名称：展示标签，可填写品牌或站点名。
+- API Base URL：只填写 API 根地址，不填写具体 endpoint。
+- API Key：创建时必填；编辑时留空表示保留旧 Key。
+- 模型名称：可手动输入，也可点击“获取模型列表”。
+- Temperature / Max Tokens / Timeout：通用模型参数。
+- 高级参数 JSON：按 Provider 白名单过滤后使用。
 
-#### 推荐配置
+| Provider 类型 | Base URL 示例 | 说明 |
+|---|---|---|
+| `OPENAI_CHAT_COMPLETIONS` | `https://api.openai.com/v1` | 后端调用 `{baseUrl}/chat/completions` |
+| `OPENAI_RESPONSES` | `https://api.openai.com/v1` | 后端调用 `{baseUrl}/responses` |
+| `ANTHROPIC_MESSAGES` | `https://api.anthropic.com/v1` | 后端调用 `{baseUrl}/messages` |
+| `GEMINI_GENERATE_CONTENT` | `https://generativelanguage.googleapis.com/v1beta` | 后端调用 `{baseUrl}/models/{model}:generateContent` |
 
-**OpenRouter（免费）**
-- Base URL: `https://openrouter.ai/api/v1`
-- Model: `google/gemma-2-9b-it:free`
-- 获取API Key: https://openrouter.ai/keys
+## 作文评分流程
 
-**OpenAI**
-- Base URL: `https://api.openai.com/v1`
-- Model: `gpt-4o` 或 `gpt-4o-mini`
+1. 在“API配置”中确认默认配置测试通过。
+2. 进入“提交作文”页面。
+3. 输入 50-10000 字符英文作文。
+4. 可选作文类型：IELTS、TOEFL、CET4、CET6。
+5. 提交评分。
+6. 系统保存作文、计算 `wordCount`、调用 AI、保存评分结果。
+7. 跳转结果页，展示总分、维度分、优点、建议、错误标注和详细评价。
+8. 历史页可查看已评分作文并进入详情。
 
-### 2. 提交作文
+## API 清单
 
-1. 访问"提交作文"页面
-2. 输入英语作文内容（50-10000字）
-3. 选择作文类型（可选）
-4. 选择API配置（可选，默认使用默认配置）
-5. 点击"提交评分"
+### 配置管理
 
-### 3. 查看结果
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| `GET` | `/api/configs/security-policy` | 获取配置页安全策略 |
+| `POST` | `/api/configs` | 创建配置 |
+| `GET` | `/api/configs` | 获取全部配置 |
+| `GET` | `/api/configs/{id}` | 获取配置详情 |
+| `PUT` | `/api/configs/{id}` | 更新配置 |
+| `DELETE` | `/api/configs/{id}` | 删除配置 |
+| `PUT` | `/api/configs/{id}/default` | 设置默认配置 |
+| `POST` | `/api/configs/{id}/reveal-api-key` | reveal 完整 Key（受环境开关控制） |
+| `POST` | `/api/configs/test-connection` | 使用未保存配置测试连接 |
+| `POST` | `/api/configs/{id}/test-connection` | 使用已保存配置测试连接 |
+| `POST` | `/api/configs/test-structured-output` | 使用未保存配置测试结构化输出 |
+| `POST` | `/api/configs/{id}/test-structured-output` | 使用已保存配置测试结构化输出 |
+| `POST` | `/api/configs/models/fetch` | 使用未保存配置拉取模型列表 |
+| `POST` | `/api/configs/{id}/models/fetch` | 使用已保存配置拉取模型列表 |
 
-评分完成后，系统会展示：
-- **总分**: 0-100分
-- **各维度分数**: 内容、语言、结构、连贯性
-- **优点分析**: 文章的优点
-- **改进建议**: 具体的改进建议
-- **错误标注**: 语法、词汇等错误
-- **详细评价**: 整体评价
+### 作文评分
 
-## 🗂️ 项目结构
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| `POST` | `/api/essays/submit` | 提交作文并评分 |
+| `GET` | `/api/essays/history?page=1&size=10` | 分页获取历史记录 |
+| `GET` | `/api/essays/{id}` | 获取作文详情和评分 |
 
-```
+## 项目结构
+
+```text
 aiwriting/
 ├── src/main/java/com/jinmo/aiwriting/
-│   ├── ai/              # AI服务（LangChain4j）
-│   │   ├── AIService.java           # AI评分核心服务
-│   │   ├── ModelFactory.java        # 动态模型工厂
-│   │   └── prompt/                  # Prompt模板
-│   ├── controller/      # REST API控制器
-│   │   ├── ApiConfigController.java # API配置管理
-│   │   └── EssayController.java     # 作文评分接口
-│   ├── service/         # 业务逻辑层
-│   │   ├── ApiConfigService.java    # API配置服务
-│   │   └── EssayService.java        # 作文服务
-│   ├── mapper/          # MyBatis-Plus Mapper
-│   │   ├── ApiConfigMapper.java
-│   │   ├── EssayMapper.java
-│   │   └── EssayScoreMapper.java
-│   ├── domain/          # 实体和DTO
-│   │   ├── entity/      # 实体类
-│   │   └── dto/         # 数据传输对象
-│   ├── config/          # 配置类
-│   │   ├── MybatisPlusConfig.java   # MyBatis-Plus配置（含分页插件）
-│   │   ├── WebConfig.java           # CORS配置
-│   │   ├── JacksonConfig.java       # JSON序列化配置
-│   │   ├── OpenApiConfig.java       # API文档配置
-│   │   └── MyMetaObjectHandler.java # 自动填充处理器
-│   └── common/          # 公共组件
-│       ├── exception/   # 异常定义
-│       └── response/    # 统一响应
+│   ├── ai/                            # AI Service、评分校验、Provider 抽象与 Adapter
+│   ├── controller/                    # REST API
+│   ├── service/                       # 业务服务
+│   ├── security/                      # API Key AES-GCM 加密
+│   ├── mapper/                        # MyBatis-Plus Mapper
+│   ├── domain/entity/                 # 实体
+│   ├── domain/dto/                    # DTO
+│   ├── config/                        # MyBatis、Jackson、OpenAPI、Web 配置
+│   └── common/                        # 统一响应与异常
 ├── src/main/resources/
-│   ├── application.yml              # 主配置文件
-│   ├── application-dev.yml          # 开发环境配置
-│   ├── application-prod.yml         # 生产环境配置
-│   └── db/init.sql                  # 数据库初始化脚本
-├── frontend/                        # Vue前端
-│   ├── src/
-│   │   ├── views/       # 页面组件
-│   │   ├── api/         # API请求模块
-│   │   ├── stores/      # Pinia状态管理
-│   │   └── types/       # TypeScript类型定义
-│   └── vite.config.ts
-├── docs/                            # 项目文档
-│   ├── MVP_PLAN.md                  # MVP计划文档
-│   ├── 编译错误修复文档.md            # 第一轮修复记录
-│   ├── 编译错误完整修复记录.md        # 完整修复记录
-│   └── 如何生成编译日志.md            # 编译调试指南
-├── docker-compose.yml               # Docker编排配置
-├── Dockerfile.backend               # 后端容器配置
-├── Dockerfile.frontend              # 前端容器配置
-├── build.gradle                     # Gradle构建配置
-└── README.md                        # 项目说明文档
+│   ├── application.yml
+│   ├── application-dev.yml
+│   ├── application-prod.yml
+│   └── db/migration/                  # Flyway migrations
+├── frontend/                          # Vue 前端
+├── docs/                              # 设计、状态、流程与数据库文档
+├── scripts/                           # 本地开发辅助脚本
+├── docker-compose.yml
+└── build.gradle
 ```
 
-## 🔌 API文档
+## 数据库迁移
 
-启动后端后访问：http://localhost:8080/swagger-ui.html
+当前使用 Flyway 管理 schema：
 
-### 主要接口
-
-- `POST /api/configs` - 创建API配置
-- `GET /api/configs` - 获取所有配置
-- `PUT /api/configs/{id}` - 更新配置
-- `DELETE /api/configs/{id}` - 删除配置
-- `PUT /api/configs/{id}/default` - 设置默认配置
-
-- `POST /api/essays/submit` - 提交作文评分
-- `GET /api/essays/history` - 获取历史记录
-- `GET /api/essays/{id}` - 获取作文详情
-
-## 🔧 配置说明
-
-### 后端配置
-
-`src/main/resources/application.yml`:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/aiwriting
-    username: aiwriting
-    password: aiwriting123
-
-# MyBatis-Plus配置
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 开发环境SQL日志
-  global-config:
-    db-config:
-      id-type: auto  # 主键自增
+```text
+src/main/resources/db/migration/V1__init_schema.sql
+src/main/resources/db/migration/V2__provider_config_abstraction.sql
 ```
 
-### 开发环境配置
+`src/main/resources/db/init.sql` 仅作为兼容/初始化参考，不再作为 dev schema 演进主路径。
 
-开发环境使用H2内存数据库，无需安装PostgreSQL：
+## 验证命令
 
-`src/main/resources/application-dev.yml`:
+```powershell
+# 后端测试
+.\gradlew.bat test --no-daemon --rerun-tasks
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:h2:mem:aiwriting_dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+# 前端构建
+cd frontend
+npm run build
 ```
 
-### 前端配置
+最近一次本地验证：后端 25 个测试通过；前端构建通过；核心链路在本地私有配置下完成过端到端验证。
 
-`frontend/.env.development`:
+## 后续计划
 
-```env
-VITE_API_BASE_URL=http://localhost:8080/api
-```
-
-## 📝 开发计划
-
-- [ ] 用户系统和认证
-- [ ] Redis缓存优化
-- [ ] 句子级错误标注增强
-- [ ] 学习报告生成
-- [ ] 进步趋势分析
-- [ ] 批量评分功能
-
-## 🔥 最近更新
-
-### v2.0.0 (2026-03-08)
-
-#### 架构重构
-- ✅ 从JPA迁移到MyBatis-Plus 3.5.9
-- ✅ 集成LangChain4j 0.36.2，支持多模型切换
-- ✅ 重构AI服务，实现动态模型工厂模式
-- ✅ 实现用户自定义API配置功能
-
-#### 依赖更新
-- ✅ MyBatis-Plus 3.5.9 (含 mybatis-plus-jsqlparser 分页插件)
-- ✅ Spring Boot 3.4.2
-- ✅ LangChain4j 0.36.2
-- ✅ H2 Database支持（开发环境）
-
-#### 配置优化
-- ✅ 新增JacksonConfig - 统一JSON序列化配置
-- ✅ 新增OpenApiConfig - Swagger UI文档配置
-- ✅ 优化MybatisPlusConfig - 分页插件配置
-- ✅ 完善异常处理体系
-
-#### 文档完善
-- ✅ MVP架构设计文档
-- ✅ 编译错误修复完整记录
-- ✅ 编译调试指南
-
-详细更新日志请查看 `docs/` 目录。
-
-## 🐛 故障排除
-
-### 编译问题
-
-如遇到编译错误，请参考：
-- `docs/如何生成编译日志.md` - 编译调试指南
-- `docs/编译错误完整修复记录.md` - 常见问题解决方案
-
-### 常见问题
-
-**Q: MyBatis-Plus分页插件报错找不到类？**
-
-A: MyBatis-Plus 3.5.9版本将分页插件分离到独立依赖，需添加：
-```gradle
-implementation 'com.baomidou:mybatis-plus-jsqlparser:3.5.9'
-```
-
-**Q: H2数据库控制台如何访问？**
-
-A: 开发环境下访问 http://localhost:8080/h2-console
-- JDBC URL: `jdbc:h2:mem:aiwriting_dev`
-- 用户名: `sa`
-- 密码: 空
-
-**Q: 如何配置多模型切换？**
-
-A: 在"API配置"页面添加不同的配置，提交作文时选择对应配置即可。
-
-## 📄 许可证
-
-MIT License
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
+- 统一错误响应结构。
+- 评分流程状态机化，避免长事务包住 AI 远程调用。
+- 历史列表增加评分摘要、模型名、评分状态。
+- 前端 bundle 拆分和 Element Plus 按需优化。
+- 生产环境接入认证/权限控制后再开放受控 API Key reveal。

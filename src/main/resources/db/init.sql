@@ -1,20 +1,29 @@
--- 创建数据库（如果使用PostgreSQL需要先创建）
--- CREATE DATABASE aiwriting;
+-- Legacy fallback schema. PostgreSQL/dev schema evolution is managed by Flyway in db/migration.
 
--- 创建api_configs表
 CREATE TABLE IF NOT EXISTS api_configs (
     id BIGSERIAL PRIMARY KEY,
     config_name VARCHAR(100) NOT NULL,
-    provider VARCHAR(50) NOT NULL,
+    provider VARCHAR(50),
+    provider_type VARCHAR(50) NOT NULL DEFAULT 'OPENAI_CHAT_COMPLETIONS',
+    provider_label VARCHAR(100),
     base_url VARCHAR(255) NOT NULL,
-    api_key VARCHAR(255) NOT NULL,
+    api_key VARCHAR(255),
+    api_key_encrypted TEXT,
     model_name VARCHAR(100) NOT NULL,
+    temperature DECIMAL(4,2) DEFAULT 0.3,
+    max_tokens INTEGER DEFAULT 2048,
+    timeout_seconds INTEGER DEFAULT 60,
+    model_parameters_json TEXT,
     is_default BOOLEAN DEFAULT FALSE,
+    last_test_status VARCHAR(20),
+    last_test_error_code VARCHAR(50),
+    last_test_message VARCHAR(500),
+    last_test_latency_ms INTEGER,
+    last_tested_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建essays表
 CREATE TABLE IF NOT EXISTS essays (
     id BIGSERIAL PRIMARY KEY,
     content TEXT NOT NULL,
@@ -23,7 +32,6 @@ CREATE TABLE IF NOT EXISTS essays (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建essay_scores表
 CREATE TABLE IF NOT EXISTS essay_scores (
     id BIGSERIAL PRIMARY KEY,
     essay_id BIGINT NOT NULL REFERENCES essays(id) ON DELETE CASCADE,
@@ -43,11 +51,7 @@ CREATE TABLE IF NOT EXISTS essay_scores (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建索引
 CREATE INDEX IF NOT EXISTS idx_essays_created_at ON essays(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_essay_id ON essay_scores(essay_id);
 CREATE INDEX IF NOT EXISTS idx_configs_default ON api_configs(is_default);
-
--- 插入示例API配置（可选）
--- INSERT INTO api_configs (config_name, provider, base_url, api_key, model_name, is_default)
--- VALUES ('OpenRouter Gemma', 'openrouter', 'https://openrouter.ai/api/v1', 'your-api-key', 'google/gemma-2-9b-it:free', true);
+CREATE INDEX IF NOT EXISTS idx_configs_provider_type ON api_configs(provider_type);

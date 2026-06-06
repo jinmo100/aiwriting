@@ -21,8 +21,8 @@ public class OpenApiConfig {
                 .version("2.0.0")
                 .description("基于LangChain4j的多模型AI作文评分系统")
                 .contact(new Contact()
-                    .name("Jinmo")
-                    .email("jinmo@example.com"))
+                    .name("AIWriting Maintainers")
+                    .email("maintainers@example.com"))
                 .license(new License()
                     .name("MIT License")
                     .url("https://opensource.org/licenses/MIT")));
