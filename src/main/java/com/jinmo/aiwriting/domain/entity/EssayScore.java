@@ -1,11 +1,16 @@
 package com.jinmo.aiwriting.domain.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 /**
- * 作文评分结果实体
+ * 动态 Rubric 评分结果实体。旧四维字段已废除，完整结果保存在 resultJson。
  */
 @Data
 @TableName("essay_scores")
@@ -18,33 +23,37 @@ public class EssayScore {
 
     private Long apiConfigId;
 
-    // 各维度分数
-    private Double overallScore;
+    private String scoringStatus;
 
-    private Double contentScore;
+    private String rubricType;
 
-    private Double languageScore;
+    private String rubricVersion;
 
-    private Double structureScore;
+    private Double nativeScore;
 
-    private Double coherenceScore;
+    private String nativeScoreDisplay;
 
-    // 详细反馈（JSON格式）
-    private String strengths;
+    private Double normalizedScore;
 
-    private String suggestions;
+    private String gradeLabel;
 
-    private String errors;
+    private String confidenceLevel;
 
-    private String detailedFeedback;
+    private String resultJson;
 
-    // 元数据
     private String aiModel;
 
     private Integer tokensUsed;
 
-    private Integer processingTime;  // 处理耗时(ms)
+    private Integer processingTime;
+
+    private String errorCode;
+
+    private String errorMessage;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
 }

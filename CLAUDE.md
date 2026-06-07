@@ -1,201 +1,213 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and Codex-like agents when working with code in this repository.
 
 ## 项目概述
 
-这是一个基于Spring Boot 3.2.3和Java 21的AI英语作文评分系统。系统通过OpenRouter API集成大语言模型（默认使用Google Gemma 2 9B），对英语作文进行智能分析，提供分数评定、优点分析和改进建议。
+这是一个基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j** 的 AI 英语作文评分系统。当前项目使用 **PostgreSQL + Redis**，通过 Flyway 管理 schema，并通过多 Provider 抽象层调用不同 AI API。
+
+评分系统已从旧的固定四维字段升级为 **作文类型驱动 + DB Rubric + 动态 RubricScoringResult**：
+
+```text
+EssayType + taskPrompt + ACTIVE DB Rubric + dimensions + annotations + nativeScore + normalizedScore
+```
+
+旧字段已废除，不要在新业务中使用：
+
+```text
+overallScore
+contentScore
+languageScore
+structureScore
+coherenceScore
+detailedFeedback
+```
 
 ## 核心技术栈
 
-- **Java 21** with GraalVM (支持Native Image编译)
-- **Spring Boot 3.2.3** (Web, JPA, Validation, Thymeleaf)
-- **Spring AI 0.8.0** (AI服务集成)
-- **H2 Database** (内存数据库)
-- **Gradle 8.x** (构建工具)
-- **Lombok** (代码简化)
+- Java 21（Gradle Toolchain；不要写入个人 JDK 路径）
+- Spring Boot 3.4.2
+- MyBatis-Plus 3.5.9
+- Flyway
+- PostgreSQL（dev/prod 基线）
+- Redis / Spring Data Redis
+- LangChain4j 1.16.1
+- Vue 3 + TypeScript + Element Plus + Vite
 
 ## 常用命令
 
-### 开发运行
-```bash
-# 使用Gradle运行（推荐）
-./gradlew bootRun
+### 后端
 
-# 使用脚本运行
-chmod +x run.sh
-./run.sh
+```powershell
+.\gradlew.bat test
+.\gradlew.bat bootRun
+.\scripts\start-backend-dev.ps1
 ```
 
-### 构建和测试
-```bash
-# 编译项目
-./gradlew build
+### 前端
 
-# 运行测试
-./gradlew test
-
-# 清理构建
-./gradlew clean
+```powershell
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+npm run build
 ```
 
-### Native Image构建
-```bash
-# 构建Native Image（需要GraalVM）
-./gradlew nativeCompile
+### 访问
 
-# 运行Native Image
-./build/native/nativeCompile/aiwriting
+```text
+后端：http://127.0.0.1:8080
+前端：http://127.0.0.1:5173
+Swagger：http://127.0.0.1:8080/swagger-ui.html
 ```
 
-### 访问应用
-- 主页: http://localhost:8080
-- H2 Console: http://localhost:8080/h2-console
+## 配置与安全
 
-## 架构设计
+- `.env.dev.local` 保存本机真实密码、Redis URL、Provider API Key、`AIWRITING_SECRET_KEY`；该文件已被 `.gitignore` 忽略。
+- 仓库公开，不要提交个人 VPS、私钥路径、真实密码、真实 API Key 或个人 JDK 路径。
+- 开发默认连接本机 PostgreSQL/Redis；SSH 隧道只是显式可选方案。
+- H2 不作为开发或运行数据库；不要恢复 H2 内存库链路。
+- `src/main/resources/db/init.sql` 是 Docker 兼容 no-op；schema 由 Flyway migrations 管理。
 
-### 分层架构
-项目采用经典的分层架构，严格遵循职责分离：
+## 数据库迁移
 
-1. **Controller层** (`controller/`): REST API端点，处理HTTP请求/响应
-2. **Service层** (`service/`): 业务逻辑处理
-   - `service/ai/`: AI服务相关（OpenRouter客户端、作文分析）
-   - `service/`: 作文业务逻辑
-3.**Domain层** (`domain/`): 领域模型
-   - `domain/entity/`: JPA实体类
-   - `domain/dto/`: 数据传输对象（使用record）
-4.**Config层** (`config/`): 配置类（OpenRouter、重试策略等）
-5.**Common层** (`common/`): 公共组件
-   - `common/exception/`: 异常定义和全局异常处理
-   - `common/response/`: 统一响应封装
+当前迁移：
 
-### AI服务集成架构
-
-**核心组件**:
-- `OpenRouterClient`: 实现Spring AI的`ChatClient`接口，封装OpenRouter API调用
-- `EssayAIService`: 作文分析服务，包含语言检测、JSON清理、UTF-8编码处理
-- `ModelRequestStrategy`: 策略模式支持多模型（GPT、Gemini/Gemma）
-
-**重试机制**: 使用Spring Retry，配置在`RetryConfig`中
-- 最大重试次数: 3次
-- 退避策略: 指数退避（初始2秒，倍数2，最大10秒）
-
-**Prompt工程**:
-- 系统使用中文反馈的专业评分Prompt（见`EssayAIService.analyzeEssay()`）
-- 要求AI返回结构化JSON格式（score, strengths, suggestions）
-- 包含语言检测和错误处理逻辑
-
-### 异常处理体系
-
-全局异常处理器 `GlobalExceptionHandler` 统一处理：
-- `AIServiceException`: AI服务异常（支持JSON格式错误消息）
-- `ResourceNotFoundException`: 资源不存在异常
-- `MethodArgumentNotValidException`: 参数验证异常
-- `ConstraintViolationException`: 约束验证异常
-- 通用异常: 返回500错误
-
-所有异常响应格式统一为：
-```json
-{
-  "error": "ERROR_CODE",
-  "message": "错误消息",
-  "details": {
-    "suggestion": "建议"
-  }
-}
+```text
+V1__init_schema.sql
+V2__provider_config_abstraction.sql
+V3__replace_legacy_scoring_schema.sql
+V4__seed_rubric_profiles.sql
+V5__async_scoring_idempotency.sql
 ```
 
-### 编码和字符集处理
+`V3` 破坏性重建 `essays` / `essay_scores`，旧历史数据不保留。`V4` 创建并 seed：
 
-项目特别注重UTF-8编码处理（针对中文反馈）：
-- JVM参数配置UTF-8编码（`build.gradle`）
-- Spring配置强制UTF-8（`application.properties`）
-- OpenRouter客户端设置Accept-Charset头
-- EssayAIService包含编码检测和转换逻辑
-
-## 配置管理
-
-### 必需配置
-创建 `src/main/resources/config/application-secrets.properties`:
-```properties
-openrouter.api-key=your-api-key-here
+```text
+rubric_profiles
+rubric_versions
+rubric_dimensions
 ```
 
-### 主要配置项 (`application.properties`)
-- `openrouter.model`: AI模型选择（默认google/gemma-2-9b-it:free）
-- `spring.ai.retry.*`: 重试策略配置
-- JVM参数: 使用分代ZGC垃圾收集器，最大堆内存2GB
+`V5` 增加异步评分和幂等支持：`idempotency_key`、`content_hash`、`essay_scores.updated_at`，并允许 `SCORING` 状态下 `result_json` 为空。
 
-## 开发规范（来自.cursorrules）
+## 作文类型
 
-### 实体类规范
-- 使用`@Entity`和`@Data`注解
-- ID使用Long类型配合`@GeneratedValue`
-- 必须包含`createdAt`字段，使用`@PrePersist`自动设置
+稳定 type code：
 
-### DTO规范
-- 使用Java record定义
-- 提供`fromEntity()`静态方法进行转换
-- 分别定义Request和Response DTO
+```text
+GENERAL
+JUNIOR_GENERAL
+JUNIOR_ZHONGKAO
+SENIOR_GENERAL
+SENIOR_GAOKAO
+CET4
+CET6
+IELTS_TASK_1
+IELTS_TASK_2
+TOEFL_INDEPENDENT
+TOEFL_INTEGRATED
+```
 
-### 服务层规范
-- 接口和实现分离
-- 使用`@Transactional`管理事务
-- 异常必须转换为自定义业务异常
-- AI服务调用必须有重试机制
+规则：
 
-### 控制器规范
-- 使用`@RestController`和`@RequestMapping`
-- 统一返回`ResponseEntity`
-- 请求参数使用`@Valid`验证
+- `TOEFL_INTEGRATED` seed 但禁用。
+- 除 `GENERAL` 外，`taskPrompt` 必填。
+- `taskPrompt` 可以是中文；`essayContent` 必须主要是英文。
+- 已接入输入防御和安全分析：过短/过长、非英文比例、emoji/特殊符号、控制字符、零宽字符、prompt injection、隐私和高风险敏感内容。
 
-## 性能优化
+## 关键后端结构
 
-### JVM优化
-- 启用分代ZGC (`-XX:+UseZGC -XX:+ZGenerational`)
-- 指针压缩 (`-XX:+UseCompressedOops`)
-- OOM时自动生成堆转储 (`-XX:+HeapDumpOnOutOfMemoryError`)
+```text
+controller/EssayController.java
+service/EssayService.java
+service/RubricService.java
+service/analysis/*
+service/idempotency/*
+ai/AIService.java
+ai/ScoringResultValidator.java
+ai/prompt/ScoringPrompt.java
+domain/dto/RubricScoringResult.java
+domain/enums/EssayType.java
+domain/entity/Rubric*.java
+mapper/Rubric*.java
+```
 
-### Native Image支持
-- 配置GraalVM Native Build Tools插件
-- 启用AOT编译 (`spring.aot.enabled=true`)
-- 移除YAML支持以减小体积
+### 评分链路
 
-## API端点
+```text
+EssayController
+  -> EssayService 创建 SCORING 任务
+  -> Redis/DB 幂等检查
+  -> scoringTaskExecutor 后台执行
+  -> RubricService.getActiveRubric()
+  -> AIService.scoreEssay()
+  -> ProviderAdapterRegistry
+  -> AIProviderAdapter.generate()
+  -> ScoringResultValidator.validateAndNormalize()
+  -> essay_scores.result_json / scoring_status
+```
+
+AI 可以给出维度分和反馈，但后端会按 DB Rubric 重新计算：
+
+- `nativeScore`
+- `normalizedScore`
+- `gradeLabel`
+- 维度 label/maxScore/rubric 信息
+
+## API
 
 ### 提交作文评分
-```
-POST /api/essays
-Content-Type: application/json
 
+```text
+POST /api/essays/submit
+```
+
+```json
 {
-  "content": "英语作文内容"
+  "essayType": "SENIOR_GAOKAO",
+  "taskPrompt": "题目/任务要求",
+  "content": "English essay content",
+  "configId": 1,
+  "idempotencyKey": "client-generated-uuid"
 }
 ```
 
-### 获取历史记录（分页）
-```
+### 历史记录
+
+```text
 GET /api/essays/history?page=0&size=10
 ```
 
-### 获取作文详情
-```
+### 详情
+
+```text
 GET /api/essays/{id}
 ```
 
-## 注意事项
+## 当前验收快照
 
-1. **语言检测**: 系统只接受英语作文，通过`isEnglishText()`方法检测（允许20%非英语字符）
-2. **API Key安全**: 不要将API Key提交到版本控制，使用`application-secrets.properties`
-3. **编码问题**: 如遇到中文乱码，检查JVM参数和Spring编码配置
-4. **重试策略**: AI服务调用失败会自动重试，注意日志中的重试次数
-5. **数据库**: 开发环境使用H2内存数据库，重启后数据丢失
+- `./gradlew.bat test` 通过。
+- `cd frontend && npm run build` 通过。
+- 后端可启动，Flyway schema 已到 v5。
+- `/api/essays/history` 返回 200。
+- 运行态样例：`essayId=2` 从 `SCORING` 轮询到 `COMPLETED`，`GENERAL/GENERAL_V1`，动态维度 4 项，`91/100`。
+- 重复 `idempotencyKey` 返回同一 `essayId`；同内容不同 key 可通过 `contentHash` 复用结果。
+- 缺少必填 `taskPrompt`、疑似 prompt injection 等 REJECT 输入会在调用 AI 前返回 400。
+- Playwright 严格验收覆盖提交页、历史页、结果页，无 Vue warning / pageerror。
 
-## 开发计划
+## 开发注意事项
 
-当前待实现功能（见README.md）：
-- 重构错误处理体系，使用统一异常对象
-- 重构前端，不再使用Bootstrap
-- 支持一键多模型切换
-- 支持MySQL数据库
-- 添加用户认证
+1. 不要恢复旧四维评分字段。
+2. Rubric 内容第一版通过 Flyway seed 入库；不要把完整评分标准硬编码到业务逻辑中。
+3. Prompt 安全外壳、JSON Schema、输入防御逻辑属于代码，不允许 DB Rubric 覆盖。
+4. `taskPrompt` 和 `essayContent` 都是不可信用户输入，prompt 中必须隔离处理。
+5. 修改评分结构后必须同时更新前端类型、结果页和历史页。
+6. 提交流程是异步主流程：提交先返回 `SCORING`，结果页轮询，后台完成后返回 `COMPLETED` 或 `FAILED`。
+7. 幂等必须同时考虑 Redis 快速缓存和 PostgreSQL 唯一索引兜底。
+8. 提交前运行：
+
+```powershell
+.\gradlew.bat test
+cd frontend
+npm run build
+```

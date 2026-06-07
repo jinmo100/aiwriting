@@ -70,3 +70,5 @@ aiwriting:
   security:
     encryption-key: ${AIWRITING_SECRET_KEY:dev-only-aiwriting-secret-change-me}
     allow-api-key-reveal: false
+  idempotency:
+    redis-required: ${AIWRITING_IDEMPOTENCY_REDIS_REQUIRED:false}

@@ -1,53 +1,26 @@
-# AI 英语作文评分系统 v2.0
+# AI 英语作文评分系统 v2.1
 
-基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j 1.16.1** 的 AI 英语作文评分系统。项目已从单一 OpenAI-compatible 调用演进为 **AI Provider 抽象层**，支持多协议 Provider、API Key 加密存储、模型列表拉取、连接测试、结构化输出测试和作文评分历史管理。
+基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j 1.16.1** 的 AI 英语作文评分系统。当前版本已经从旧的固定四维评分升级为 **作文类型驱动 + DB Rubric + 动态评分报告**，并保留多 Provider AI 配置能力。
 
 ## 当前状态
 
-- 后端：Spring Boot 3.4.2、Java 21、MyBatis-Plus 3.5.9、Flyway、PostgreSQL、Redis、LangChain4j 1.16.1。
+- 后端：Spring Boot 3.4.2、Java 21、MyBatis-Plus、Flyway、PostgreSQL、Redis、LangChain4j。
 - 前端：Vue 3、TypeScript、Element Plus、Vite、Pinia、Axios。
-- 开发环境默认：本机 PostgreSQL + 本机 Redis；不再使用 H2 作为日常开发数据库。
-- 可选环境：如数据库/Redis 在远端，可通过本地 `.env.dev.local` 覆盖连接参数，必要时手动启用 SSH 隧道脚本。
-- 本地访问：
-  - 后端：`http://127.0.0.1:8080`
-  - 前端开发服务：`http://127.0.0.1:5173`
-  - Swagger UI：`http://127.0.0.1:8080/swagger-ui.html`
+- 数据库：PostgreSQL 是 dev/prod 基线；H2 不作为日常开发数据库。
+- Schema：Flyway 管理，`src/main/resources/db/init.sql` 仅为 Docker 兼容 no-op。
+- 评分：旧四维字段已废除，评分结果统一保存为 `RubricScoringResult` JSON。
 
 ## 核心功能
 
 - 多 Provider 协议适配：`OPENAI_CHAT_COMPLETIONS`、`OPENAI_RESPONSES`、`ANTHROPIC_MESSAGES`、`GEMINI_GENERATE_CONTENT`。
-- API 配置管理：新增、编辑、删除、设置默认配置。
-- API Key 加密存储：新建/更新配置写入 `api_key_encrypted`，旧 `api_key` 字段仅兼容读取。
-- dev 环境可控 reveal：普通接口只返回 `hasApiKey` 和 `apiKeyPreview`。
-- Provider 测试：测试连接、测试结构化输出。
-- 模型列表拉取：支持已保存配置和未保存配置；Redis 缓存模型列表。
-- AI 评分：内容、语言、结构、连贯性四维评分，返回优点、建议、错误标注、详细评价。
-- 结构化输出校验：JSON 解析、本地字段校验、失败后 repair retry 一次。
-- 历史记录：保存作文、`wordCount`、作文类型、评分结果和处理耗时。
-
-## 技术栈
-
-### 后端
-
-- Java 21（通过 Gradle Toolchain 声明；仓库不固定个人 JDK 路径）
-- Spring Boot 3.4.2
-- MyBatis-Plus 3.5.9
-- Flyway 10.x
-- PostgreSQL
-- Redis / Spring Data Redis
-- LangChain4j 1.16.1 + OpenAI Official beta adapter
-- Caffeine 本地缓存
-- SpringDoc OpenAPI
-- Lombok
-
-### 前端
-
-- Vue 3
-- TypeScript 5
-- Element Plus
-- Vite 5
-- Pinia
-- Axios
+- API 配置管理：新增、编辑、删除、设置默认配置、连接测试、结构化输出测试、模型列表拉取。
+- API Key 加密存储：新建/更新写入 `api_key_encrypted`，普通接口不返回完整 Key。
+- 作文类型驱动评分：支持通用、初中、中考、高中、高考、CET4、CET6、IELTS Task 1/2、TOEFL Independent；TOEFL Integrated 已 seed 但暂缓开放。
+- DB Rubric：`rubric_profiles` / `rubric_versions` / `rubric_dimensions` 保存 ACTIVE 评分标准。
+- 动态评分结果：原生分、100 分换算、等级、置信度、动态维度、证据、改进建议、片段问题、输入分析。
+- 输入防御：基础 PASS/WARN/REJECT、prompt injection 检测、隐私/高风险敏感内容、emoji/特殊符号/控制字符/零宽字符/非英文比例检查。
+- 异步评分与幂等：提交后立即返回 `SCORING`，后台评分；`idempotencyKey` + `contentHash` 通过 Redis/DB 防重复提交。
+- 前端中文友好：中文作文类型、题目/任务要求输入、AI Thinking 等待提示、动态维度结果页、增强历史页。
 
 ## 本地开发启动
 
@@ -60,16 +33,13 @@ PostgreSQL: localhost:5432 / database=aiwriting / user=aiwriting
 Redis:      redis://localhost:6379/0
 ```
 
-可以使用本机安装、Docker Compose 或自行准备的数据库。H2 控制台默认关闭，H2 不再作为当前开发链路。
-
 ### 2. 准备本地 env 文件
 
 ```powershell
 Copy-Item .env.dev.example .env.dev.local
-# 编辑 .env.dev.local，填入本机真实 DEV_DB_PASSWORD、DEV_REDIS_URL、AIWRITING_SECRET_KEY 等
 ```
 
-`.env.dev.local` 已被 `.gitignore` 忽略，不要提交真实密码、API Key、私有远端地址或 SSH Key 路径。
+编辑 `.env.dev.local`，填入本机真实值，例如 `DEV_DB_PASSWORD`、`DEV_REDIS_URL`、`AIWRITING_SECRET_KEY`。该文件已被 `.gitignore` 忽略，不能提交真实密码、API Key、远端地址或 SSH Key 路径。
 
 ### 3. 启动后端
 
@@ -77,21 +47,17 @@ Copy-Item .env.dev.example .env.dev.local
 .\scripts\start-backend-dev.ps1
 ```
 
-该脚本会加载 `.env.dev.local`（如果存在），然后执行 `./gradlew.bat bootRun`。也可以直接运行：
+或：
 
 ```powershell
 .\gradlew.bat bootRun
 ```
 
-如需远端数据库/Redis，可在 `.env.dev.local` 中设置 `DEV_DB_HOST`、`DEV_DB_PORT`、`DEV_REDIS_URL` 等。只有明确需要 SSH 转发时才使用：
+如数据库/Redis 在远端，可在 `.env.dev.local` 覆盖连接参数；只有明确需要 SSH 转发时才使用：
 
 ```powershell
 .\scripts\start-backend-dev.ps1 -WithTunnel
-# 或单独启动隧道：
-.\scripts\start-vps-postgres-tunnel.ps1 -TunnelHost example.com -TunnelUser ubuntu -IdentityFile C:\path\to\id_rsa
 ```
-
-隧道脚本没有仓库默认主机、用户名或私钥路径；这些值必须通过参数或环境变量显式提供。
 
 ### 4. 启动前端
 
@@ -101,38 +67,54 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-访问：`http://127.0.0.1:5173`
+访问：
 
-## 配置 Provider
-
-进入“API配置”页面新增配置：
-
-- 配置名称：自定义展示名称，例如 `OpenRouter`、`OpenAI`、`Gemini`。
-- Provider 类型：选择协议适配器。
-- Provider 名称：展示标签，可填写品牌或站点名。
-- API Base URL：只填写 API 根地址，不填写具体 endpoint。
-- API Key：创建时必填；编辑时留空表示保留旧 Key。
-- 模型名称：可手动输入，也可点击“获取模型列表”。
-- Temperature / Max Tokens / Timeout：通用模型参数。
-- 高级参数 JSON：按 Provider 白名单过滤后使用。
-
-| Provider 类型 | Base URL 示例 | 说明 |
-|---|---|---|
-| `OPENAI_CHAT_COMPLETIONS` | `https://api.openai.com/v1` | 后端调用 `{baseUrl}/chat/completions` |
-| `OPENAI_RESPONSES` | `https://api.openai.com/v1` | 后端调用 `{baseUrl}/responses` |
-| `ANTHROPIC_MESSAGES` | `https://api.anthropic.com/v1` | 后端调用 `{baseUrl}/messages` |
-| `GEMINI_GENERATE_CONTENT` | `https://generativelanguage.googleapis.com/v1beta` | 后端调用 `{baseUrl}/models/{model}:generateContent` |
+```text
+后端：http://127.0.0.1:8080
+前端：http://127.0.0.1:5173
+Swagger：http://127.0.0.1:8080/swagger-ui.html
+```
 
 ## 作文评分流程
 
-1. 在“API配置”中确认默认配置测试通过。
-2. 进入“提交作文”页面。
-3. 输入 50-10000 字符英文作文。
-4. 可选作文类型：IELTS、TOEFL、CET4、CET6。
-5. 提交评分。
-6. 系统保存作文、计算 `wordCount`、调用 AI、保存评分结果。
-7. 跳转结果页，展示总分、维度分、优点、建议、错误标注和详细评价。
-8. 历史页可查看已评分作文并进入详情。
+1. 在“API配置”中新增或确认默认配置。
+2. 进入“提交作文”。
+3. 选择作文类型；除“通用英语作文”外，需要填写 `taskPrompt`。
+4. 输入主要由英文构成的作文正文。
+5. 提交后页面显示 `AI Thinking` 等待态。
+6. 后端创建 `SCORING` 任务并返回 `essayId`，前端进入结果页轮询。
+7. 后台任务加载对应 ACTIVE Rubric，构建隔离 prompt，调用 AI。
+8. 后端按 Rubric 维度重新计算原生分、换算分和等级，保存 `result_json`。
+9. 结果页动态展示维度、证据、建议、片段问题和原文。
+10. 历史页展示作文类型、题目摘要、词数、原生分、换算分、等级、置信度、状态、模型。
+
+### 提交请求示例
+
+```json
+{
+  "essayType": "SENIOR_GAOKAO",
+  "taskPrompt": "假定你是李华，请写一封邮件邀请外教参加班级英语角。",
+  "content": "Dear Mr. Smith, ...",
+  "configId": 1,
+  "idempotencyKey": "client-generated-uuid"
+}
+```
+
+## 作文类型
+
+| code | 中文展示 | 状态 |
+|---|---|---|
+| `GENERAL` | 通用英语作文 | 可用 |
+| `JUNIOR_GENERAL` | 初中英语作文 | 可用 |
+| `JUNIOR_ZHONGKAO` | 中考英语作文 | 可用 |
+| `SENIOR_GENERAL` | 高中英语作文 | 可用 |
+| `SENIOR_GAOKAO` | 高考英语作文 | 可用 |
+| `CET4` | 大学英语四级作文 | 可用 |
+| `CET6` | 大学英语六级作文 | 可用 |
+| `IELTS_TASK_1` | 雅思 Task 1 图表作文 | 可用 |
+| `IELTS_TASK_2` | 雅思 Task 2 议论文 | 可用 |
+| `TOEFL_INDEPENDENT` | 托福独立写作 | 可用 |
+| `TOEFL_INTEGRATED` | 托福综合写作（暂缓开放） | 禁用 |
 
 ## API 清单
 
@@ -159,64 +141,56 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 | 方法 | 路径 | 功能 |
 |---|---|---|
-| `POST` | `/api/essays/submit` | 提交作文并评分 |
-| `GET` | `/api/essays/history?page=1&size=10` | 分页获取历史记录 |
-| `GET` | `/api/essays/{id}` | 获取作文详情和评分 |
-
-## 项目结构
-
-```text
-aiwriting/
-├── src/main/java/com/jinmo/aiwriting/
-│   ├── ai/                            # AI Service、评分校验、Provider 抽象与 Adapter
-│   ├── controller/                    # REST API
-│   ├── service/                       # 业务服务
-│   ├── security/                      # API Key AES-GCM 加密
-│   ├── mapper/                        # MyBatis-Plus Mapper
-│   ├── domain/entity/                 # 实体
-│   ├── domain/dto/                    # DTO
-│   ├── config/                        # MyBatis、Jackson、OpenAPI、Web 配置
-│   └── common/                        # 统一响应与异常
-├── src/main/resources/
-│   ├── application.yml
-│   ├── application-dev.yml
-│   ├── application-prod.yml
-│   └── db/migration/                  # Flyway migrations
-├── frontend/                          # Vue 前端
-├── docs/                              # 设计、状态、流程与数据库文档
-├── scripts/                           # 本地开发辅助脚本
-├── docker-compose.yml
-└── build.gradle
-```
+| `POST` | `/api/essays/submit` | 提交作文并异步评分 |
+| `GET` | `/api/essays/history?page=0&size=10` | 分页获取历史记录 |
+| `GET` | `/api/essays/{id}` | 获取作文详情和动态评分报告 |
 
 ## 数据库迁移
 
-当前使用 Flyway 管理 schema：
+当前 Flyway migrations：
 
 ```text
-src/main/resources/db/migration/V1__init_schema.sql
-src/main/resources/db/migration/V2__provider_config_abstraction.sql
+V1__init_schema.sql
+V2__provider_config_abstraction.sql
+V3__replace_legacy_scoring_schema.sql
+V4__seed_rubric_profiles.sql
+V5__async_scoring_idempotency.sql
 ```
 
-`src/main/resources/db/init.sql` 仅作为兼容/初始化参考，不再作为 dev schema 演进主路径。
+`V3` 会破坏性重建 `essays` / `essay_scores`，历史旧四维数据不保留。`V4` 创建并 seed Rubric 表。`V5` 增加异步评分和幂等字段/索引。
 
 ## 验证命令
 
 ```powershell
-# 后端测试
-.\gradlew.bat test --no-daemon --rerun-tasks
-
-# 前端构建
+.\gradlew.bat test
 cd frontend
 npm run build
 ```
 
-最近一次本地验证：后端 25 个测试通过；前端构建通过；核心链路在本地私有配置下完成过端到端验证。
+当前已验证：后端测试通过；前端构建通过。
+本地运行验证：后端当前代码可启动，Flyway schema 已到 v5，`/api/essays/history` 返回 200；异步提交流程返回 `SCORING`，重复 `idempotencyKey` 返回同一 `essayId`，同内容 `contentHash` 可复用已完成结果；缺少必填 `taskPrompt` 和疑似 prompt injection 输入会在调用 AI 前返回 400。
+
+### 2026-06-07 验收快照
+
+- API：`/api/essays/history?page=0&size=1` 返回 200。
+- 提交链路：新作文 `essayId=2` 从 `SCORING` 轮询到 `COMPLETED`。
+- 结果摘要：`GENERAL/GENERAL_V1`，动态维度 4 项，`nativeScoreDisplay=91/100`，`normalizedScore=91`。
+- 幂等：同一 `idempotencyKey` 再次提交返回同一 `essayId=2`；同内容不同 key 通过 `contentHash` 复用同一结果。
+- 防护：prompt injection 输入、非 `GENERAL` 缺失 `taskPrompt` 均在调用 AI 前返回 400。
+- 前端：Playwright 严格验收通过，覆盖 `/submit`、`/history`、`/result/2`，无 Vue warning / pageerror。
+- 截图：`C:/tmp/aiwriting-submit.png`、`C:/tmp/aiwriting-history.png`、`C:/tmp/aiwriting-result-2.png`。
+
+## 已决设计边界
+
+- 目标用户包含初中、高中、大学和出国考试用户，因此作文类型必须覆盖不同学段/考试。
+- 旧四维字段彻底废除，历史旧数据不做兼容迁移。
+- Rubric 和类型特定 prompt instruction 放 DB；安全外壳、输出结构校验、输入防御仍放代码。
+- `taskPrompt` 可以是中文，作文正文必须主要为英文。
+- 对超长、过短、非英文比例过高、emoji/特殊符号、prompt injection、隐私和高风险敏感内容做 PASS/WARN/REJECT。
+- 评分必须异步化，前端显示 `AI Thinking`，后端用 Redis/DB 保证幂等和防重复提交。
+- 公开仓库默认连接普通本机 PostgreSQL/Redis；个人 VPS、密码、API Key 只放本地 env。
 
 ## 后续计划
 
-- 统一错误响应结构。
-- 评分流程状态机化，避免长事务包住 AI 远程调用。
-- 历史列表增加评分摘要、模型名、评分状态。
-- 前端 bundle 拆分和 Element Plus 按需优化。
-- 生产环境接入认证/权限控制后再开放受控 API Key reveal。
+- 安全增强：更完整的敏感内容策略运营和可解释安全提示。
+- 生产增强：认证/权限、前端 bundle 拆分、Rubric 管理后台。

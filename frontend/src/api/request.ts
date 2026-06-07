@@ -5,7 +5,7 @@ import type { ApiResponse } from '@/types'
 
 const axiosInstance = axios.create({
   baseURL: '/api',
-  timeout: 60000 // AI评分可能需要较长时间
+  timeout: 120000 // 异步评分已落地；保留较长超时用于配置测试、模型列表和慢网络场景
 })
 
 // 请求拦截器
@@ -31,8 +31,9 @@ axiosInstance.interceptors.response.use(
     return res.data
   },
   (error) => {
-    ElMessage.error(error.message || '网络错误')
-    return Promise.reject(error)
+    const message = error.response?.data?.message || error.message || '网络错误'
+    ElMessage.error(message)
+    return Promise.reject(new Error(message))
   }
 )
 

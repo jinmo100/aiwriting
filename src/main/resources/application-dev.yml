@@ -22,11 +22,6 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
-  h2:
-    console:
-      enabled: false
-      path: /h2-console
-
   jpa:
     hibernate:
       ddl-auto: none

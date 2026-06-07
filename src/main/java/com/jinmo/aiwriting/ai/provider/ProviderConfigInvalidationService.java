@@ -68,6 +68,10 @@ public class ProviderConfigInvalidationService implements DisposableBean {
             try (var connection = redisTemplate.getRequiredConnectionFactory().getConnection()) {
                 log.info("开始订阅 Provider 配置缓存失效频道: {}", CHANNEL);
                 connection.subscribe(listener, channel);
+                if (running) {
+                    log.warn("Provider 配置缓存失效订阅已结束，将稍后重试");
+                    sleepBeforeRetry();
+                }
             } catch (Exception e) {
                 if (running) {
                     log.warn("Provider 配置缓存失效订阅不可用，将稍后重试: {}", e.getMessage());

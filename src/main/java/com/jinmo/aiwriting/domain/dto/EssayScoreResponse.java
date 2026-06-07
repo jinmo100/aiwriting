@@ -1,31 +1,27 @@
 package com.jinmo.aiwriting.domain.dto;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
-/**
- * 评分结果响应DTO
- */
 public record EssayScoreResponse(
     Long essayId,
-    ScoreDetail score,
-    Integer processingTime
+    Long scoreId,
+    EssayResponse essay,
+    RubricScoringResult result,
+    String scoringStatus,
+    String aiModel,
+    Integer tokensUsed,
+    Integer processingTime,
+    String rubricType,
+    String rubricVersion,
+    Double nativeScore,
+    String nativeScoreDisplay,
+    Double normalizedScore,
+    String gradeLabel,
+    String confidenceLevel,
+    String idempotencyKey,
+    String contentHash,
+    String errorCode,
+    String errorMessage,
+    LocalDateTime createdAt
 ) {
-    public record ScoreDetail(
-        Double overallScore,
-        Double contentScore,
-        Double languageScore,
-        Double structureScore,
-        Double coherenceScore,
-        List<String> strengths,
-        List<String> suggestions,
-        List<ErrorDetail> errors,
-        String detailedFeedback
-    ) {}
-
-    public record ErrorDetail(
-        String sentence,
-        String type,
-        String description,
-        String correction
-    ) {}
 }
