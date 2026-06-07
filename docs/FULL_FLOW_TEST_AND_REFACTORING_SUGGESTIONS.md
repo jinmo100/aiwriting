@@ -53,7 +53,7 @@ Vue 前端（Vite）
 - 同内容不同 `idempotencyKey` 通过 `contentHash` 复用同一 `essayId=2`。
 - prompt injection 样例返回 400；非 `GENERAL` 缺失 `taskPrompt` 返回 400。
 - Playwright 严格验收覆盖 `/submit`、`/history`、`/result/2`，无 Vue warning / pageerror。
-- 截图留存：`C:/tmp/aiwriting-submit.png`、`C:/tmp/aiwriting-history.png`、`C:/tmp/aiwriting-result-2.png`。
+- 截图留存：`C:/tmp/essay-evaluator-submit.png`、`C:/tmp/essay-evaluator-history.png`、`C:/tmp/essay-evaluator-result-2.png`。
 
 ## 启动步骤
 

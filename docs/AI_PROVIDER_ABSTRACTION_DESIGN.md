@@ -276,7 +276,7 @@ model_parameters_json
 算法：AES-GCM
 数据库：只存 api_key_encrypted
 开发环境：加密主密钥可明文写 application-dev.yml
-生产环境：加密主密钥来自环境变量，例如 AIWRITING_SECRET_KEY
+生产环境：加密主密钥来自环境变量，例如 ESSAY_EVALUATOR_SECRET_KEY
 ```
 
 读取策略：
@@ -310,7 +310,7 @@ POST /api/configs/{id}/reveal-api-key
 配置建议：
 
 ```yaml
-aiwriting:
+essay-evaluator:
   security:
     allow-api-key-reveal: true
 ```
@@ -557,7 +557,7 @@ Gemini:                    GET {base_url}/models
 Redis 缓存策略：
 
 ```text
-key：aiwriting:provider-models:{providerType}:{baseUrlHash}:{apiKeyHash}
+key：essay-evaluator:provider-models:{providerType}:{baseUrlHash}:{apiKeyHash}
 TTL：10 分钟
 value：规范化后的模型列表 JSON
 forceRefresh=true 时绕过缓存重新拉取

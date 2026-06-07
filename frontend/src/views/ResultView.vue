@@ -246,7 +246,7 @@ const detail = ref<EssayScoreResponse | null>(null)
 const thinkingStepIndex = ref(0)
 let pollingTimer: number | undefined
 let thinkingTimer: number | undefined
-const pendingStorageKey = 'aiwriting:pendingSubmission'
+const pendingStorageKey = 'essay-evaluator:pendingSubmission'
 const thinkingSteps = [
   '正在理解题目要求...',
   '正在检查作文结构...',

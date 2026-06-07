@@ -3,10 +3,10 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: aiwriting-db
+    container_name: essay-evaluator-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-aiwriting}
-      POSTGRES_USER: ${POSTGRES_USER:-aiwriting}
+      POSTGRES_DB: ${POSTGRES_DB:-essay_evaluator}
+      POSTGRES_USER: ${POSTGRES_USER:-essay_evaluator}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -14,9 +14,9 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     networks:
-      - aiwriting-network
+      - essay-evaluator-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aiwriting}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-essay_evaluator}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,16 +25,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: aiwriting-backend
+    container_name: essay-evaluator-backend
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-aiwriting}
-      DB_USER: ${POSTGRES_USER:-aiwriting}
+      DB_NAME: ${POSTGRES_DB:-essay_evaluator}
+      DB_USER: ${POSTGRES_USER:-essay_evaluator}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
-      AIWRITING_SECRET_KEY: ${AIWRITING_SECRET_KEY:?Set AIWRITING_SECRET_KEY in .env}
+      ESSAY_EVALUATOR_SECRET_KEY: ${ESSAY_EVALUATOR_SECRET_KEY:?Set ESSAY_EVALUATOR_SECRET_KEY in .env}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
@@ -43,32 +43,32 @@ services:
       redis:
         condition: service_started
     networks:
-      - aiwriting-network
+      - essay-evaluator-network
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: aiwriting-redis
+    container_name: essay-evaluator-redis
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
     ports:
       - "${REDIS_PORT:-6379}:6379"
     networks:
-      - aiwriting-network
+      - essay-evaluator-network
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: ../Dockerfile.frontend
-    container_name: aiwriting-frontend
+    container_name: essay-evaluator-frontend
     ports:
       - "${FRONTEND_PORT:-80}:80"
     depends_on:
       - backend
     networks:
-      - aiwriting-network
+      - essay-evaluator-network
     restart: unless-stopped
 
 volumes:
@@ -76,5 +76,5 @@ volumes:
   redis-data:
 
 networks:
-  aiwriting-network:
+  essay-evaluator-network:
     driver: bridge

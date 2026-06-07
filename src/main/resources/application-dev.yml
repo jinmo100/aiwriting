@@ -1,8 +1,8 @@
 spring:
   datasource:
     # 默认连接本机 PostgreSQL。若通过 SSH 隧道访问远端数据库，请在 .env.dev.local 中覆盖 DEV_DB_HOST/DEV_DB_PORT。
-    url: jdbc:postgresql://${DEV_DB_HOST:localhost}:${DEV_DB_PORT:5432}/${DEV_DB_NAME:aiwriting}
-    username: ${DEV_DB_USER:aiwriting}
+    url: jdbc:postgresql://${DEV_DB_HOST:localhost}:${DEV_DB_PORT:5432}/${DEV_DB_NAME:essay_evaluator}
+    username: ${DEV_DB_USER:essay_evaluator}
     password: ${DEV_DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -36,11 +36,11 @@ mybatis-plus:
 
 logging:
   level:
-    com.jinmo.aiwriting: DEBUG
+    com.jinmo.essayevaluator: DEBUG
     dev.langchain4j: DEBUG
     org.apache.ibatis: WARN
 
-aiwriting:
+essay-evaluator:
   security:
-    encryption-key: ${AIWRITING_SECRET_KEY:dev-only-aiwriting-secret-change-me}
+    encryption-key: ${ESSAY_EVALUATOR_SECRET_KEY:dev-only-essay-evaluator-secret-change-me}
     allow-api-key-reveal: true

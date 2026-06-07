@@ -1,12 +1,12 @@
 spring:
   application:
-    name: aiwriting
+    name: essay-evaluator
   profiles:
     default: dev
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aiwriting}
-    username: ${DB_USER:aiwriting}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:essay_evaluator}
+    username: ${DB_USER:essay_evaluator}
     password: ${DB_PASSWORD:}
     driver-class-name: org.postgresql.Driver
     hikari:
@@ -31,7 +31,7 @@ spring:
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.jinmo.aiwriting.domain.entity
+  type-aliases-package: com.jinmo.essayevaluator.domain.entity
   configuration:
     map-underscore-to-camel-case: true
     cache-enabled: false
@@ -54,7 +54,7 @@ server:
 logging:
   level:
     root: INFO
-    com.jinmo.aiwriting: DEBUG
+    com.jinmo.essayevaluator: DEBUG
     dev.langchain4j: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{15}) - %msg%n"
@@ -66,9 +66,9 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
-aiwriting:
+essay-evaluator:
   security:
-    encryption-key: ${AIWRITING_SECRET_KEY:dev-only-aiwriting-secret-change-me}
+    encryption-key: ${ESSAY_EVALUATOR_SECRET_KEY:dev-only-essay-evaluator-secret-change-me}
     allow-api-key-reveal: false
   idempotency:
-    redis-required: ${AIWRITING_IDEMPOTENCY_REDIS_REQUIRED:false}
+    redis-required: ${ESSAY_EVALUATOR_IDEMPOTENCY_REDIS_REQUIRED:false}

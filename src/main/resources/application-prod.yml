@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aiwriting}
-    username: ${DB_USER:aiwriting}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:essay_evaluator}
+    username: ${DB_USER:essay_evaluator}
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 20
@@ -19,10 +19,10 @@ spring:
 logging:
   level:
     root: INFO
-    com.jinmo.aiwriting: INFO
+    com.jinmo.essayevaluator: INFO
     dev.langchain4j: INFO
 
-aiwriting:
+essay-evaluator:
   security:
-    encryption-key: ${AIWRITING_SECRET_KEY}
+    encryption-key: ${ESSAY_EVALUATOR_SECRET_KEY}
     allow-api-key-reveal: false

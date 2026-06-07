@@ -573,8 +573,8 @@ PostgreSQL：最终权威记录 / 唯一索引兜底 / 审计
 ### 7.2 Redis key
 
 ```text
-aiwriting:idempotency:{idempotencyKey}
-aiwriting:content-submission:{contentHash}
+essay-evaluator:idempotency:{idempotencyKey}
+essay-evaluator:content-submission:{contentHash}
 ```
 
 Value 只保存摘要，不保存正文：
@@ -1310,7 +1310,7 @@ Redis 不可用时继续评分。
 配置项：
 
 ```yaml
-aiwriting:
+essay-evaluator:
   idempotency:
     redis-required: false
 ```

@@ -4,7 +4,7 @@
       "Bash(xargs ls -la)",
       "Bash(curl -X POST http://localhost:8080/api/essays/submit -H \"Content-Type: application/json\" -d '{:*)",
       "Bash(curl -X PUT http://localhost:8080/api/configs/1 -H \"Content-Type: application/json\" -d '{:*)",
-      "Bash(git add frontend/src/components/NavBar.vue frontend/src/App.vue frontend/vite.config.ts frontend/package-lock.json src/main/java/com/jinmo/aiwriting/ai/AIService.java src/main/java/com/jinmo/aiwriting/ai/ModelFactory.java .claude/settings.json)",
+      "Bash(git add frontend/src/components/NavBar.vue frontend/src/App.vue frontend/vite.config.ts frontend/package-lock.json src/main/java/com/jinmo/essayevaluator/ai/AIService.java src/main/java/com/jinmo/essayevaluator/ai/ModelFactory.java .claude/settings.json)",
       "Bash(git rm .cursorrules)",
       "Bash(git add .claude/settings.json)"
     ]

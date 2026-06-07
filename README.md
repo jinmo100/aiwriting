@@ -1,6 +1,6 @@
-# AI 英语作文评分系统 v2.1
+# 英作评析（Essay Evaluator） v2.1
 
-基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j 1.16.1** 的 AI 英语作文评分系统。当前版本已经从旧的固定四维评分升级为 **作文类型驱动 + DB Rubric + 动态评分报告**，并保留多 Provider AI 配置能力。
+**英作评析（Essay Evaluator）** 是一套基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j 1.16.1** 的英语作文智能评分系统。当前版本已经从旧的固定四维评分升级为 **作文类型驱动 + DB Rubric + 动态评分报告**，并保留多 Provider AI 配置能力。
 
 ## 当前状态
 
@@ -29,7 +29,7 @@
 默认开发配置连接本机服务：
 
 ```text
-PostgreSQL: localhost:5432 / database=aiwriting / user=aiwriting
+PostgreSQL: localhost:5432 / database=essay_evaluator / user=essay_evaluator
 Redis:      redis://localhost:6379/0
 ```
 
@@ -39,7 +39,7 @@ Redis:      redis://localhost:6379/0
 Copy-Item .env.dev.example .env.dev.local
 ```
 
-编辑 `.env.dev.local`，填入本机真实值，例如 `DEV_DB_PASSWORD`、`DEV_REDIS_URL`、`AIWRITING_SECRET_KEY`。该文件已被 `.gitignore` 忽略，不能提交真实密码、API Key、远端地址或 SSH Key 路径。
+编辑 `.env.dev.local`，填入本机真实值，例如 `DEV_DB_PASSWORD`、`DEV_REDIS_URL`、`ESSAY_EVALUATOR_SECRET_KEY`。该文件已被 `.gitignore` 忽略，不能提交真实密码、API Key、远端地址或 SSH Key 路径。
 
 ### 3. 启动后端
 
@@ -178,7 +178,7 @@ npm run build
 - 幂等：同一 `idempotencyKey` 再次提交返回同一 `essayId=2`；同内容不同 key 通过 `contentHash` 复用同一结果。
 - 防护：prompt injection 输入、非 `GENERAL` 缺失 `taskPrompt` 均在调用 AI 前返回 400。
 - 前端：Playwright 严格验收通过，覆盖 `/submit`、`/history`、`/result/2`，无 Vue warning / pageerror。
-- 截图：`C:/tmp/aiwriting-submit.png`、`C:/tmp/aiwriting-history.png`、`C:/tmp/aiwriting-result-2.png`。
+- 截图：`C:/tmp/essay-evaluator-submit.png`、`C:/tmp/essay-evaluator-history.png`、`C:/tmp/essay-evaluator-result-2.png`。
 
 ## 已决设计边界
 

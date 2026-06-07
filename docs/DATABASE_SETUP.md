@@ -5,7 +5,7 @@
 ## 默认连接
 
 ```text
-PostgreSQL: localhost:5432 / database=aiwriting / user=aiwriting
+PostgreSQL: localhost:5432 / database=essay_evaluator / user=essay_evaluator
 Redis:      redis://localhost:6379/0
 ```
 
@@ -14,8 +14,8 @@ Redis:      redis://localhost:6379/0
 ```text
 DEV_DB_HOST=localhost
 DEV_DB_PORT=5432
-DEV_DB_NAME=aiwriting
-DEV_DB_USER=aiwriting
+DEV_DB_NAME=essay_evaluator
+DEV_DB_USER=essay_evaluator
 DEV_DB_PASSWORD=
 DEV_REDIS_URL=redis://localhost:6379/0
 ```
@@ -120,8 +120,8 @@ Rubric 使用版本发布模型：`DRAFT` / `ACTIVE` / `ARCHIVED`。当前后端
 幂等 key：
 
 ```text
-aiwriting:idempotency:{idempotencyKey}
-aiwriting:content-submission:{contentHash}
+essay-evaluator:idempotency:{idempotencyKey}
+essay-evaluator:content-submission:{contentHash}
 ```
 
 Redis 只保存摘要状态，不保存作文正文；PostgreSQL 仍是最终权威记录。第一版 `AI Thinking` 状态由数据库轮询返回，不强依赖 Redis。
@@ -152,7 +152,7 @@ GET /api/essays/{id}
 
 ### Redis 连接失败
 
-检查 `DEV_REDIS_URL`。默认 `aiwriting.idempotency.redis-required=false`，Redis 不可用时会降级到 PostgreSQL 的 `idempotency_key` 唯一索引和 `content_hash` 查询，不向用户暴露 Redis 故障。若生产环境改为 `redis-required=true`，Redis 不可用时应返回“系统繁忙，请稍后再试”。
+检查 `DEV_REDIS_URL`。默认 `essay-evaluator.idempotency.redis-required=false`，Redis 不可用时会降级到 PostgreSQL 的 `idempotency_key` 唯一索引和 `content_hash` 查询，不向用户暴露 Redis 故障。若生产环境改为 `redis-required=true`，Redis 不可用时应返回“系统繁忙，请稍后再试”。
 
 ### Flyway 校验失败
 

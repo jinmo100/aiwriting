@@ -1,4 +1,4 @@
-# AI 英语作文评分系统项目现状报告
+# 英作评析项目现状报告
 
 更新时间：2026-06-07
 
@@ -34,7 +34,7 @@ GEMINI_GENERATE_CONTENT
 - 新增/更新配置时写入 `api_key_encrypted`。
 - 旧 `api_key` 字段仅兼容读取。
 - 普通接口只返回 `hasApiKey` 和 `apiKeyPreview`。
-- 完整 Key reveal 受 `aiwriting.security.allow-api-key-reveal` 控制。
+- 完整 Key reveal 受 `essay-evaluator.security.allow-api-key-reveal` 控制。
 
 ### Rubric 动态评分
 
@@ -97,8 +97,8 @@ EssayController
 - `idempotency_key` 唯一索引兜底同 key 重复提交。
 - `content_hash` 记录同内容提交，近期相同内容会复用正在评分或已完成记录。
 - Redis key：
-  - `aiwriting:idempotency:{idempotencyKey}`
-  - `aiwriting:content-submission:{contentHash}`
+  - `essay-evaluator:idempotency:{idempotencyKey}`
+  - `essay-evaluator:content-submission:{contentHash}`
 - Redis 不可用默认降级 DB，不向用户暴露 Redis 故障。
 - 前端提交生成 `idempotencyKey`，结果页对 `SCORING` 状态自动轮询。
 
@@ -183,7 +183,7 @@ Vite chunk 体积警告属于性能优化项，不阻塞功能。
 - 幂等验证：同一 `idempotencyKey` 重复请求返回 `essayId=2`；同内容不同 key 通过 `contentHash` 复用 `essayId=2`。
 - 输入防御验证：prompt injection 样例返回 400；非 `GENERAL` 缺失 `taskPrompt` 返回 400，且均未进入 AI 调用。
 - 前端严格验收：Playwright 覆盖提交页、历史页、结果页；验证高考类型可选、TOEFL Integrated 暂缓开放、历史记录和结果页动态字段展示正常；无 Vue warning / pageerror。
-- 验收截图：`C:/tmp/aiwriting-submit.png`、`C:/tmp/aiwriting-history.png`、`C:/tmp/aiwriting-result-2.png`。
+- 验收截图：`C:/tmp/essay-evaluator-submit.png`、`C:/tmp/essay-evaluator-history.png`、`C:/tmp/essay-evaluator-result-2.png`。
 
 ## 已决事项边界
 

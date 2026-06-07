@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) and Codex-like agent
 
 ## 项目概述
 
-这是一个基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j** 的 AI 英语作文评分系统。当前项目使用 **PostgreSQL + Redis**，通过 Flyway 管理 schema，并通过多 Provider 抽象层调用不同 AI API。
+**英作评析（Essay Evaluator）** 是一个基于 **Spring Boot 3.4.2 + Java 21 + Vue 3 + LangChain4j** 的英语作文智能评分系统。当前项目使用 **PostgreSQL + Redis**，通过 Flyway 管理 schema，并通过多 Provider 抽象层调用不同 AI API。
 
 评分系统已从旧的固定四维字段升级为 **作文类型驱动 + DB Rubric + 动态 RubricScoringResult**：
 
@@ -62,7 +62,7 @@ Swagger：http://127.0.0.1:8080/swagger-ui.html
 
 ## 配置与安全
 
-- `.env.dev.local` 保存本机真实密码、Redis URL、Provider API Key、`AIWRITING_SECRET_KEY`；该文件已被 `.gitignore` 忽略。
+- `.env.dev.local` 保存本机真实密码、Redis URL、Provider API Key、`ESSAY_EVALUATOR_SECRET_KEY`；该文件已被 `.gitignore` 忽略。
 - 仓库公开，不要提交个人 VPS、私钥路径、真实密码、真实 API Key 或个人 JDK 路径。
 - 开发默认连接本机 PostgreSQL/Redis；SSH 隧道只是显式可选方案。
 - H2 不作为开发或运行数据库；不要恢复 H2 内存库链路。

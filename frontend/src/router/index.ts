@@ -38,7 +38,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  document.title = (to.meta.title as string) || 'AI英语作文评分系统'
+  document.title = (to.meta.title as string) || '英作评析'
   next()
 })
 

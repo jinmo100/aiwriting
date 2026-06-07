@@ -7,5 +7,5 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-    <logger name="com.jinmo.aiwriting" level="DEBUG"/>
+    <logger name="com.jinmo.essayevaluator" level="DEBUG"/>
 </configuration> 

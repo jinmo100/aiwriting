@@ -115,7 +115,7 @@ const thinkingSteps = [
   '正在根据评分标准打分...',
   '正在整理修改建议...'
 ]
-const pendingStorageKey = 'aiwriting:pendingSubmission'
+const pendingStorageKey = 'essay-evaluator:pendingSubmission'
 
 const form = ref<EssaySubmitRequest>({
   content: '',
