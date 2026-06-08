@@ -247,6 +247,24 @@ npm run build
 
 Vite chunk 体积警告属于性能优化项，不阻塞功能。
 
+### 2026-06-08 v2.3 运行验收快照
+
+运行地址：
+
+- 后端：`http://127.0.0.1:8080`
+- 前端：`http://127.0.0.1:5173`
+
+本次为本机临时运行时 smoke test，不使用 `.env.dev.local` 中的真实业务数据库和 Provider Key：
+
+- PostgreSQL 18.4 临时实例：`127.0.0.1:55432`，数据目录 `build/runtime-smoke/pgdata`。
+- Redis 8.8 临时实例：`127.0.0.1:56379`。
+- 后端启动：通过临时 `DEV_DB_HOST/DEV_DB_PORT/DEV_DB_NAME/DEV_DB_USER/DEV_DB_PASSWORD/DEV_REDIS_URL` 覆盖 dev profile，Flyway schema 成功迁移到 `V9`。
+- 后端健康度：`GET /api/auth/me` 返回 200，未登录态返回 `authenticated=false`。
+- 认证与 Session：`POST /api/auth/register` 成功；同一 `HttpOnly Cookie` session 下 `GET /api/auth/me` 返回 `authenticated=true`。
+- 个人数据接口：新 smoke 用户下 `GET /api/dashboard/summary` 返回 `totalEssays=0`；`GET /api/configs` 返回空列表，符合注册后不创建空配置的边界。
+- 前端启动：`npm.cmd run dev -- --host 127.0.0.1 --port 5173` 成功；`GET /login` 返回 200。
+- 未调用真实 AI Provider；评分端到端需要用户先新增自己的 Provider/API Key 配置。
+
 ### 2026-06-07 最新验收快照
 
 后端运行地址：`http://127.0.0.1:8080`；前端运行地址：`http://localhost:5173`。

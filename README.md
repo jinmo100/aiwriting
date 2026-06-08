@@ -199,8 +199,20 @@ cd frontend
 npm run build
 ```
 
-当前已验证：后端测试通过；前端构建通过。
+当前已验证：后端测试通过；评分基准软门禁报告可生成；前端构建通过；v2.3 运行 smoke test 通过。
 本地运行验证：后端当前代码可启动；异步提交流程返回 `SCORING`，重复 `idempotencyKey` 返回同一 `essayId`，同内容 `contentHash` 可复用已完成结果；修改版提交流程只用 `idempotencyKey` 防重复点击，不用 `contentHash` 误命中旧版本；缺少必填 `taskPrompt` 和疑似 prompt injection 输入会在调用 AI 前返回 400。当前迁移已到 `V9`。
+
+### 2026-06-08 v2.3 运行验收快照
+
+本次 smoke test 使用临时本机运行时，不读取或打印 `.env.dev.local` 中的真实 Provider Key / 数据库密码：
+
+- PostgreSQL 18.4：临时数据目录 `build/runtime-smoke/pgdata`，监听 `127.0.0.1:55432`。
+- Redis 8.8：临时监听 `127.0.0.1:56379`。
+- 后端：通过临时 `DEV_DB_*` / `DEV_REDIS_URL` 环境变量启动，Flyway 成功迁移到 `V9`，`GET /api/auth/me` 返回 200。
+- 前端：`npm.cmd run dev -- --host 127.0.0.1 --port 5173` 启动成功，`GET /login` 返回 200。
+- 认证链路：`POST /api/auth/register` 成功创建 smoke 用户，随后同一 cookie session 下 `GET /api/auth/me` 返回 `authenticated=true`。
+- 用户隔离基础接口：登录态下 `GET /api/dashboard/summary` 返回空账号汇总，`GET /api/configs` 返回当前用户空配置列表。
+- 未调用真实 AI Provider；作文评分端到端仍需要用户先配置自己的 Provider/API Key。
 
 ### 2026-06-07 验收快照
 

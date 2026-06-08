@@ -49,6 +49,13 @@
 - “loading”文案改为更能体现模型分析过程的 `AI Thinking`。
 - 写作辅助工具箱、Rubric 管理后台、多版本作文等放后续阶段。
 
+2026-06-08 运行验收补充：
+
+- 使用临时本机 PostgreSQL 18.4 + Redis 8.8 运行时启动后端，Flyway schema 已迁移到 `V9`。
+- 前端 dev server 在 `127.0.0.1:5173` 启动成功，`/login` 可访问。
+- 已通过 smoke test 覆盖注册、Cookie Session 下当前用户、dashboard 空账号汇总、当前用户配置空列表。
+- 未调用真实 AI Provider；真实评分端到端仍依赖用户先配置自己的 Provider/API Key。
+
 ## 2. 同类产品能力对标
 
 ### 2.1 Grammarly
