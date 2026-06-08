@@ -56,7 +56,7 @@ provider_type VARCHAR(50) NOT NULL
 展示名称与协议类型分离：
 
 ```text
-config_name      用户自定义配置名称，例如“晚霞公益站”
+config_name      用户自定义配置名称，例如“openai官方”
 provider_label   展示标签，例如 OpenAI / OpenRouter / Gemini / Anthropic
 provider_type    真正控制调用逻辑的协议适配器枚举
 ```

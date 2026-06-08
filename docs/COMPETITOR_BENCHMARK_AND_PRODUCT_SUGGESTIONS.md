@@ -1,6 +1,6 @@
 # 同类 AI 写作/作文评分产品对标与追加建议
 
-更新时间：2026-06-07
+更新时间：2026-06-08
 
 ## 1. 对标目标
 
@@ -12,9 +12,16 @@
 - DB Rubric 与版本化评分标准。
 - 异步作文提交和 AI Thinking 等待态。
 - Redis/DB 幂等与防重复提交。
+- 用户账号、Redis Session + HttpOnly Cookie、用户维度数据隔离。
+- 用户自带 Provider/API/模型配置，结果页透明展示 Provider、Endpoint、Model、Token、usageSource 和预计费用。
 - 动态维度分数、原生分、100 分换算、等级、置信度。
 - 优点分析、优先改进建议、片段级错误标注。
 - 输入防御、安全分析、prompt injection 和敏感内容规则。
+- AI 失败分类、中文错误提示、最多 3 次受控重试。
+- 24 篇离线评分一致性基准集与软门禁报告。
+- 逐句/片段批注 quote 高亮与同水平提升版范文展示。
+- 多版本作文修改链：`parentEssayId`、`essayGroupId`、`versionNo`。
+- 个人学习看板：提交数、平均/最高分、近期活跃和类型分布。
 - 历史记录和动态结果页。
 
 本文件参考同类型产品与项目能力，补充产品、技术、教学和商业化方向建议。
@@ -227,14 +234,14 @@
 
 ### 3.2 技术能力差距
 
-当前项目已补齐 Provider 抽象、响应校验、数据库 migration、API Key 加密、异步评分和基础幂等；后续仍缺少：
+当前项目已补齐 Provider 抽象、响应校验、数据库 migration、API Key 加密、异步评分、基础幂等、用户维度隔离、评分调用 token/cost 观测、AI 失败分类与受控重试阶段 1、离线评分一致性基准集阶段 1；后续仍缺少：
 
-- 更细的 AI 调用失败分类和用户可理解错误提示。
-- 成本、token、延迟和 requestId 级别观测。
+- Provider 测试、模型拉取、Rubric 测试等非评分调用的观测日志。
+- 更细的队列级错误、持久化错误和 Provider 熔断/退避治理。
 - 审计日志和更系统的脱敏日志。
 - 后台任务队列、超时治理、SSE/WebSocket 推送。
 - 自动化 E2E 测试和 CI 固化。
-- 评分一致性基准集与回归评测。
+- 真实 Provider 回放、分数漂移检测和回归评测闭环。
 
 ### 3.3 教学能力差距
 
@@ -529,11 +536,11 @@ GET /api/essays/{id}
 - 后台任务队列。
 - 轮询超时提示。
 - SSE/WebSocket 推送。
-- 更细的失败分类和重试策略。
+- 队列级重试、Provider 退避/熔断和持久化失败分类。
 
 ### 5.5 成本与用量统计
 
-建议增加：
+阶段 1 已新增 `ai_invocation_logs`，评分调用已覆盖：
 
 ```text
 tokens_input
@@ -543,6 +550,8 @@ provider_latency
 request_id
 error_code
 ```
+
+后续应把同一套日志扩展到 Provider 连接测试、模型列表拉取、Rubric 测试和管理后台操作。
 
 用途：
 
@@ -666,16 +675,102 @@ error_code
 
 ## 8. 下一阶段最值得优先做的 10 个改动
 
-1. Rubric 管理后台：DRAFT 编辑、测试、发布 ACTIVE、归档旧版本。
-2. 结果页轮询超时和手动刷新/重试提示，后续升级 SSE/WebSocket。
-3. 评分一致性基准集：不同作文类型准备标准样例，防止 prompt/rubric 回归。
-4. 更细的 AI 调用失败分类：Provider 超时、限流、格式错误、内容拒绝、配置错误。
-5. 成本与用量统计：tokens、耗时、requestId、estimatedCost。
-6. 正文内逐句高亮批注，支持接受/忽略建议。
-7. 多版本作文修改闭环：初稿、二稿、三稿对比。
-8. 学习进步 dashboard：分数趋势、高频错误、薄弱维度。
-9. 自动化 E2E 测试和 CI 固化。
-10. 前端性能优化：Element Plus 按需导入、Vite manualChunks。
+2026-06-08 讨论结论：下一阶段目标从“单纯评分体验增强”升级为 **产品化底座 + 评分可信度 + 学习闭环**。由于用户会自己填写 API 与模型，用户系统、数据隔离、调用透明度成为所有后续能力的前置依赖。
+
+### 8.1 优先级排序
+
+1. **最小用户系统（阶段 1 已落地）**
+   - 注册、登录、登出、当前用户。
+   - Redis server-side session，Session ID 通过 `HttpOnly Cookie` 保存。
+   - 开放注册，通过配置开关控制。
+   - 角色先做 `USER` / `ADMIN`。
+   - 注册、登录、reveal-key、提交评分、Provider 测试接入 Redis 轻量限流。
+
+2. **业务数据按用户隔离（阶段 1 已落地）**
+   - `essays.user_id`、`api_configs.owner_user_id`、AI 调用日志 `user_id`。
+   - 历史、详情、配置、调用明细全部按当前用户过滤。
+   - 越权访问详情统一返回 `404`，避免暴露 ID 是否存在。
+   - `idempotencyKey` 从全局唯一调整为 `UNIQUE(user_id, idempotency_key)`。
+   - 用户系统上线后不保留匿名评分兼容。
+
+3. **用户自带模型配置透明化（阶段 1 已落地）**
+   - API 配置以用户私有 `PRIVATE` 为主，预留管理员 `PUBLIC` 配置。
+   - 提交评分前必须有可用配置；没有配置时引导用户先添加配置。
+   - 注册后不创建空配置，跳转配置页并提供 Provider 模板引导。
+   - 用户可以显式查看自己 `PRIVATE` 配置的完整 API Key，不要求二次输入密码。
+   - 前端不把完整 Key 写入 `localStorage` / `sessionStorage`，后端不打印明文；`PUBLIC` 配置不向普通用户 reveal 完整 Key。
+
+4. **AI 调用日志与 token/cost 展示（阶段 1 已落地）**
+   - 阶段 1 已落地：新增 `ai_invocation_logs` 明细表，记录作文评分调用。
+   - 后续补齐 Provider 测试、模型拉取、Rubric 测试等非评分调用。
+   - 字段覆盖 provider、endpoint type、model、requestId、latency、input/output/total tokens、usageSource、estimatedCost、currency、failureCode。
+   - 用户侧默认展示评分汇总，也可折叠查看安全化调用明细。
+   - Provider 返回 usage 时优先使用精确 token；拿不到时允许本地估算，但必须标记“约/估算”。
+   - 预计费用由用户在 API 配置中填写输入/输出 token 单价和币种后计算；未配置单价时只展示 token。
+
+5. **AI 失败分类与可重试机制（阶段 1 已落地）**
+   - 已区分配置错误、Provider 超时、限流、内容拒绝、AI 响应格式异常、通用 Provider 错误、输入拒绝等。
+   - 后端保存 `failure_code`、`failure_message`、`failure_detail_json`；原始错误脱敏/截断后只进结构化详情。
+   - 用户侧展示中文友好失败摘要、错误类型、是否可重试和尝试次数。
+   - 已增加 `POST /api/essays/{id}/retry`，第一版只允许 `FAILED -> SCORING`。
+   - 同一作文最多重试 3 次，不允许 `COMPLETED` 直接重新评分；AI 调用日志按 `attempt_no` 记录。
+   - 后续可继续细化：持久化失败分类、队列级重试、Provider 熔断/退避。
+
+6. **结果页异步体验增强（阶段 1 部分落地）**
+   - 已保留并强化 `AI Thinking` 状态。
+   - 已增加手动刷新、失败后的重新评分按钮、评分尝试次数。
+   - 已展示 AI Thinking 用时、模型、token 消耗、失败原因。
+   - Provider 未返回 usage 时页面明确显示“约/估算”或“未返回用量”。
+   - 后续补齐：轮询超时提示、SSE/WebSocket 推送、长时间等待时的更细状态说明。
+
+7. **评分一致性基准集（阶段 1 已落地）**
+   - 第一版已准备 24 篇离线样例：中考 6、高考 6、CET4 3、CET6 3、IELTS Task 2 3、GENERAL 3。
+   - 中考/高考样例覆盖不同任务形态，如书信/邮件、通知/倡议、记叙经历、观点表达等。
+   - 每篇记录题目、作文、期望 100 分换算区间、等级区间、关注标签。
+   - 已用测试固化样例数量、类型分布、题目/正文/期望区间基础质量。
+   - `.\gradlew.bat scoringBenchmarkReport` 生成 `build/reports/scoring-benchmark/report.md`。
+   - 当前作为软门禁：不调用真实 Provider，不消耗用户 API Key，生成报告但暂不硬阻断 CI。
+   - 后续再加入真实 Provider 回放、分数漂移检测、关键反馈点校验和人工复核入口。
+
+8. **逐句批注与参考范文（阶段 1 部分落地）**
+   - 已让模型结构返回 `annotations[].quote`，前端用 `quote` / `original` / `context` 做文本匹配高亮，不强依赖模型 offset。
+   - 已实现匹配策略：exact match -> case-insensitive match -> whitespace-normalized match -> 未定位建议列表。
+   - 批注卡片展示错误类型、严重程度、问题说明、修改建议、原因解释和高亮定位文本。
+   - 已新增 `referenceEssay`，结果页可展示 1 个“同水平提升版”参考范文，强调学习参考，不做一键替换。
+   - 后续补齐：复制修改建议、标记已读/暂不处理、quote 漂移检测。
+
+9. **多版本作文修改闭环（阶段 1 部分落地）**
+   - 已建立 `essay_group_id`、`version_no`、`parent_essay_id` 模型。
+   - 用户可从结果页基于当前作文再次提交修改版，形成 v1/v2/v3。
+   - 修改版只用 `idempotencyKey` 防重复点击，不用 `contentHash` 误复用旧版本。
+   - 历史页和结果页已展示版本号。
+   - 后续补齐：对比分数、维度、错误数量、高频错误变化。
+   - 第一版不做复杂在线编辑器、逐条接受建议、草稿自动保存。
+
+10. **个人学习进步 dashboard（阶段 1 部分落地）**
+    - 第一版只面向个人学生，不做教师/班级。
+    - 已展示总提交、已完成、失败、评分中、平均分、最高分、7/30/90 天提交次数、作文类型分布。
+    - 已新增 `/api/dashboard/summary` 和前端 `/dashboard` 导航入口。
+    - 后续补齐：平均分趋势、高频错误、最弱 Rubric 维度、最近提升点。
+
+### 8.2 用户系统已决边界
+
+- 认证方式：账号密码 + Spring Security + Redis Session + `HttpOnly Cookie`；第一版不用 JWT 放 `localStorage`。
+- 注册策略：开放注册，但通过 `essay-evaluator.auth.registration-enabled` 控制；`ADMIN` 只能由初始化机制或数据库创建，不能前端注册。
+- 初始化管理员：通过环境变量可选创建 admin；仓库不写默认密码。
+- 邮箱能力：第一版不做邮箱验证和找回密码，但预留 `email_verified`、`email_verified_at`、`password_changed_at`。
+- 前端登录态：轻量 `authStore` / composable + Axios `withCredentials` + 路由守卫，不为第一版引入复杂状态管理。
+- 访问规则：评分、历史、配置、调用日志、dashboard 要求登录；首页、登录、注册、安全策略等基础接口可公开访问。
+- 旧数据：现有历史数据不重要，用户系统 migration 可以清空旧作文、评分、配置数据并重建用户归属字段。
+
+### 8.3 API 配置与透明用量已决边界
+
+- 用户自己填写 API、Provider、endpoint type、model，因此结果页应清楚展示真实 Provider、模型和 token 消耗。
+- 不把模型包装成不透明“评分引擎”。
+- 用户可查看自己私有配置的完整 API Key，但必须显式点击 reveal；不要求重新输入密码。
+- token 统计优先使用 Provider 返回的精确 usage；失败、流式、中转或兼容接口缺失 usage 时才估算。
+- 费用展示可选，取决于用户是否在配置中填写单价；不硬编码官方价格。
+- 明细日志对开发排查有用，用户侧只展示安全化明细，不展示原始 prompt、原始 response、原始错误全文和 API Key。
 
 ## 9. 参考来源
 
