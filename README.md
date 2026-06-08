@@ -68,10 +68,20 @@ Copy-Item .env.dev.example .env.dev.local
 
 编辑 `.env.dev.local`，填入本机真实值，例如 `DEV_DB_PASSWORD`、`DEV_REDIS_URL`、`ESSAY_EVALUATOR_SECRET_KEY`。该文件已被 `.gitignore` 忽略，不能提交真实密码、API Key、远端地址或 SSH Key 路径。
 
+如需做真实 Provider 的本地验收，请在 `.env.dev.local` 额外填写测试专用配置，避免使用假 key 或本地 stub 掩盖问题：
+
+```env
+E2E_PROVIDER_TYPE=OPENAI_CHAT_COMPLETIONS
+E2E_PROVIDER_BASE_URL=https://your-provider.example/v1
+E2E_PROVIDER_API_KEY=your-test-key
+E2E_PROVIDER_MODEL=your-test-model
+```
+
 运行验收约束：
 
 - 可以使用 `.env.dev.local` 中的真实数据库、Redis 和 Provider Key；当前开发数据不重要。
 - 不要为了跑通验收自行安装本机 PostgreSQL/Redis，也不要绕开 `.env.dev.local` 临时搭替代运行时。
+- Provider 相关验收优先使用 `.env.dev.local` 中的 `E2E_PROVIDER_*` 真实测试配置；不要用本地 stub 替代“获取模型列表 / 测试连接 / 结构化输出 / 实际评分”链路。
 - 如果 `.env.dev.local` 指向的服务不可达，应优先启动/修复对应真实服务或 SSH 隧道，并明确报告阻塞。
 
 ### 3. 启动后端

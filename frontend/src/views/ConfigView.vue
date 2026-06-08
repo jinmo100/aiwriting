@@ -149,11 +149,7 @@
               <el-option
                 v-for="model in fetchedModels"
                 :key="model.id"
-                :label="
-                  model.displayName
-                    ? `${model.id} - ${model.displayName}`
-                    : model.id
-                "
+                :label="formatModelLabel(model)"
                 :value="model.id"
               />
             </el-select>
@@ -498,7 +494,7 @@ async function handleFetchModels(forceRefresh: boolean) {
             apiKey: form.value.apiKey || "",
             forceRefresh,
           });
-    fetchedModels.value = result.models || [];
+    fetchedModels.value = normalizeModels(result.models || []);
     ElMessage.success(
       `获取到 ${fetchedModels.value.length} 个模型${result.fromCache ? "（缓存）" : ""}`,
     );
@@ -515,6 +511,23 @@ async function handleFetchModelsSaved(row: ApiConfig) {
   } finally {
     fetchingModels.value = false;
   }
+}
+
+function normalizeModels(models: ProviderModelInfo[]) {
+  const seen = new Set<string>();
+  return models.filter((model) => {
+    const id = model.id?.trim();
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function formatModelLabel(model: ProviderModelInfo) {
+  const id = model.id?.trim() || "";
+  const displayName = model.displayName?.trim();
+  if (!displayName || displayName === id) return id;
+  return `${id} - ${displayName}`;
 }
 
 async function handleTestConnection() {

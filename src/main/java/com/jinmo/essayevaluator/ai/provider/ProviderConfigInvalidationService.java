@@ -7,14 +7,12 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Provider 配置缓存失效协调。
@@ -29,22 +27,21 @@ import java.util.concurrent.TimeUnit;
 public class ProviderConfigInvalidationService implements DisposableBean {
 
     private static final String CHANNEL = "provider-config-invalidated";
-    private static final Duration RETRY_DELAY = Duration.ofSeconds(10);
+    private static final ChannelTopic TOPIC = new ChannelTopic(CHANNEL);
 
     private final LangChainChatModelFactory chatModelFactory;
     private final StringRedisTemplate redisTemplate;
-
-    private final ExecutorService subscriberExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread thread = new Thread(r, "provider-config-invalidation-subscriber");
-        thread.setDaemon(true);
-        return thread;
-    });
-
-    private volatile boolean running = true;
+    private final RedisMessageListenerContainer redisMessageListenerContainer;
+    private final MessageListener listener = this::onMessage;
 
     @PostConstruct
     public void startSubscriber() {
-        subscriberExecutor.submit(this::subscribeLoop);
+        try {
+            redisMessageListenerContainer.addMessageListener(listener, TOPIC);
+            log.info("已注册 Provider 配置缓存失效频道订阅: {}", CHANNEL);
+        } catch (Exception e) {
+            log.warn("注册 Provider 配置缓存失效频道订阅失败，本地缓存仍会按 TTL 兜底: {}", e.getMessage());
+        }
     }
 
     public void invalidate(Long configId) {
@@ -57,27 +54,6 @@ public class ProviderConfigInvalidationService implements DisposableBean {
         } catch (Exception e) {
             log.warn("发布 Provider 配置缓存失效消息失败，已完成本地失效: configId={}, error={}",
                 configId, e.getMessage());
-        }
-    }
-
-    private void subscribeLoop() {
-        byte[] channel = CHANNEL.getBytes(StandardCharsets.UTF_8);
-        MessageListener listener = this::onMessage;
-
-        while (running) {
-            try (var connection = redisTemplate.getRequiredConnectionFactory().getConnection()) {
-                log.info("开始订阅 Provider 配置缓存失效频道: {}", CHANNEL);
-                connection.subscribe(listener, channel);
-                if (running) {
-                    log.warn("Provider 配置缓存失效订阅已结束，将稍后重试");
-                    sleepBeforeRetry();
-                }
-            } catch (Exception e) {
-                if (running) {
-                    log.warn("Provider 配置缓存失效订阅不可用，将稍后重试: {}", e.getMessage());
-                    sleepBeforeRetry();
-                }
-            }
         }
     }
 
@@ -95,18 +71,12 @@ public class ProviderConfigInvalidationService implements DisposableBean {
         }
     }
 
-    private void sleepBeforeRetry() {
-        try {
-            TimeUnit.MILLISECONDS.sleep(RETRY_DELAY.toMillis());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            running = false;
-        }
-    }
-
     @Override
     public void destroy() {
-        running = false;
-        subscriberExecutor.shutdownNow();
+        try {
+            redisMessageListenerContainer.removeMessageListener(listener, TOPIC);
+        } catch (Exception e) {
+            log.debug("移除 Provider 配置缓存失效频道订阅时忽略异常: {}", e.getMessage());
+        }
     }
 }
