@@ -1,10 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/config'
+    redirect: '/submit'
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: { title: '登录', public: true }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/RegisterView.vue'),
+    meta: { title: '注册', public: true }
   },
   {
     path: '/config',
@@ -29,6 +42,18 @@ const routes: RouteRecordRaw[] = [
     name: 'History',
     component: () => import('@/views/HistoryView.vue'),
     meta: { title: '历史记录' }
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('@/views/DashboardView.vue'),
+    meta: { title: '学习看板' }
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/ProfileView.vue'),
+    meta: { title: '个人中心' }
   }
 ]
 
@@ -37,8 +62,26 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   document.title = (to.meta.title as string) || '英作评析'
+  const authStore = useAuthStore()
+  const isPublic = Boolean(to.meta.public)
+  try {
+    await authStore.fetchMe()
+  } catch {
+    // /api/auth/me 失败时按未登录处理，避免守卫卡死。
+  }
+
+  if (!isPublic && !authStore.isAuthenticated) {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+    return
+  }
+
+  if (isPublic && authStore.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
+    next((to.query.redirect as string) || '/submit')
+    return
+  }
+
   next()
 })
 

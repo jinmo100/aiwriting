@@ -22,8 +22,10 @@
       <div class="overview-grid pending-info">
         <div><span class="muted">作文类型：</span>{{ detail.essay.essayTypeDisplayName }}</div>
         <div><span class="muted">英文词数：</span>{{ detail.essay.wordCount }}</div>
+        <div><span class="muted">版本：</span>v{{ detail.essay.versionNo || 1 }}</div>
         <div><span class="muted">模型：</span>{{ detail.aiModel || '等待调度' }}</div>
         <div><span class="muted">任务状态：</span>{{ statusLabel(detail.scoringStatus) }}</div>
+        <div><span class="muted">尝试次数：</span>第 {{ detail.attemptCount || 1 }} 次</div>
       </div>
       <div class="actions">
         <el-button @click="reloadNow">立即刷新</el-button>
@@ -40,13 +42,27 @@
       </template>
       <el-alert
         type="error"
-        title="AI评分失败，请稍后重新提交"
+        :title="detail.retryable ? 'AI评分失败，可以直接重试' : 'AI评分失败，需要调整后重新提交'"
         :description="detail.errorMessage || '评分任务执行失败。'"
         :closable="false"
         show-icon
       />
+      <div class="overview-grid failed-info">
+        <div><span class="muted">错误类型：</span>{{ detail.errorCode || 'UNKNOWN' }}</div>
+        <div><span class="muted">尝试次数：</span>{{ detail.attemptCount || 1 }}/3</div>
+        <div><span class="muted">是否可重试：</span>{{ detail.retryable ? '可以重试' : '不可直接重试' }}</div>
+        <div><span class="muted">模型：</span>{{ detail.aiModel || '未知' }}</div>
+      </div>
       <div class="actions">
-        <el-button type="primary" @click="router.push('/submit')">重新提交</el-button>
+        <el-button
+          v-if="detail.retryable"
+          type="primary"
+          :loading="retrying"
+          @click="handleRetry"
+        >
+          重试评分
+        </el-button>
+        <el-button type="primary" plain @click="router.push('/submit')">修改后重新提交</el-button>
         <el-button @click="router.push('/history')">查看历史</el-button>
       </div>
     </el-card>
@@ -94,10 +110,60 @@
 
         <div class="overview-grid">
           <div><span class="muted">作文类型：</span>{{ detail.essay.essayTypeDisplayName }}</div>
+          <div><span class="muted">版本：</span>v{{ detail.essay.versionNo || 1 }}</div>
           <div><span class="muted">模型：</span>{{ detail.aiModel || '未知' }}</div>
           <div><span class="muted">评分耗时：</span>{{ detail.processingTime || 0 }}ms</div>
           <div><span class="muted">Rubric：</span>{{ scoring.rubric.name }} / {{ scoring.rubric.version }}</div>
+          <div><span class="muted">尝试次数：</span>第 {{ detail.attemptCount || 1 }} 次</div>
         </div>
+      </el-card>
+
+      <el-card v-if="aiUsage" class="feedback-card">
+        <template #header>
+          <div class="card-header">
+            <span>AI 调用与 Token 消耗</span>
+            <el-tag type="info">{{ usageSourceLabel(aiUsage.usageSource) }}</el-tag>
+          </div>
+        </template>
+        <div class="overview-grid">
+          <div><span class="muted">Provider：</span>{{ aiUsage.provider || '未知' }}</div>
+          <div><span class="muted">Endpoint：</span>{{ aiUsage.endpointType || '未知' }}</div>
+          <div><span class="muted">Model：</span>{{ aiUsage.model || detail.aiModel || '未知' }}</div>
+          <div><span class="muted">调用次数：</span>{{ aiUsage.invocationCount }}</div>
+          <div><span class="muted">输入 Token：</span>{{ formatToken(aiUsage.inputTokens, aiUsage.usageSource) }}</div>
+          <div><span class="muted">输出 Token：</span>{{ formatToken(aiUsage.outputTokens, aiUsage.usageSource) }}</div>
+          <div><span class="muted">总 Token：</span>{{ formatToken(aiUsage.totalTokens, aiUsage.usageSource) }}</div>
+          <div><span class="muted">AI Thinking 用时：</span>{{ aiUsage.latencyMs || detail.processingTime || 0 }}ms</div>
+          <div v-if="aiUsage.estimatedCost !== undefined && aiUsage.estimatedCost !== null">
+            <span class="muted">预计费用：</span>{{ formatCost(aiUsage.estimatedCost, aiUsage.currency, aiUsage.usageSource) }}
+          </div>
+        </div>
+        <el-collapse v-if="aiUsage.invocations?.length" class="usage-details">
+          <el-collapse-item title="查看调用明细" name="details">
+            <el-table :data="aiUsage.invocations" size="small">
+              <el-table-column prop="purpose" label="用途" min-width="120" />
+              <el-table-column prop="status" label="状态" width="90" />
+              <el-table-column prop="model" label="模型" min-width="160" />
+              <el-table-column label="Token" min-width="180">
+                <template #default="{ row }">
+                  {{ formatToken(row.totalTokens, row.usageSource) }}
+                  <span class="muted">（{{ row.inputTokens || 0 }}/{{ row.outputTokens || 0 }}）</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="耗时" width="100">
+                <template #default="{ row }">{{ row.latencyMs || 0 }}ms</template>
+              </el-table-column>
+              <el-table-column label="费用" min-width="120">
+                <template #default="{ row }">
+                  <span v-if="row.estimatedCost !== undefined && row.estimatedCost !== null">
+                    {{ formatCost(row.estimatedCost, row.currency, row.usageSource) }}
+                  </span>
+                  <span v-else class="muted">未配置单价</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-collapse-item>
+        </el-collapse>
       </el-card>
 
       <el-card v-if="hasTaskPrompt" class="feedback-card">
@@ -181,12 +247,13 @@
           <span>逐句/片段问题</span>
         </template>
         <div class="annotation-list">
-          <div v-for="(item, index) in scoring.annotations" :key="index" class="annotation-card">
+          <div :id="`annotation-${index}`" v-for="(item, index) in scoring.annotations" :key="index" class="annotation-card">
             <div class="annotation-head">
               <el-tag size="small" type="danger">{{ item.type }}</el-tag>
               <el-tag size="small" type="warning">{{ item.severity }}</el-tag>
             </div>
             <p><span class="muted">原文片段：</span>{{ item.original || item.context }}</p>
+            <p v-if="item.quote"><span class="muted">高亮定位：</span>{{ item.quote }}</p>
             <p><span class="muted">问题：</span>{{ item.message }}</p>
             <p><span class="muted">建议：</span>{{ item.suggestion }}</p>
             <p v-if="item.explanation"><span class="muted">说明：</span>{{ item.explanation }}</p>
@@ -215,13 +282,39 @@
         <p class="feedback-text">{{ scoring.summary.overallFeedback }}</p>
       </el-card>
 
+      <el-card v-if="scoring.referenceEssay?.content" class="feedback-card">
+        <template #header>{{ scoring.referenceEssay.title || '同水平提升版范文' }}</template>
+        <el-alert
+          type="success"
+          title="这不是满分范文，而是在保留原意和当前能力层级基础上的改写示例"
+          :closable="false"
+          show-icon
+        />
+        <p class="essay-content reference-essay">{{ scoring.referenceEssay.content }}</p>
+        <ul v-if="scoring.referenceEssay.notes?.length" class="plain-list">
+          <li v-for="(note, index) in scoring.referenceEssay.notes" :key="index">{{ note }}</li>
+        </ul>
+      </el-card>
+
       <el-card class="feedback-card">
-        <template #header>原文</template>
-        <p class="essay-content">{{ detail.essay.content }}</p>
+        <template #header>原文与批注高亮</template>
+        <p class="essay-content">
+          <template v-for="(segment, index) in highlightedEssaySegments" :key="index">
+            <mark
+              v-if="segment.annotationIndex !== undefined"
+              class="essay-highlight"
+              :class="highlightClass(segment.severity)"
+              @click="scrollToAnnotation(segment.annotationIndex)"
+            >{{ segment.text }}</mark>
+            <span v-else>{{ segment.text }}</span>
+          </template>
+        </p>
+        <p v-if="!hasHighlightedAnnotations" class="muted">暂无可定位批注，已在上方列出未定位建议。</p>
       </el-card>
 
       <div class="actions">
         <el-button type="primary" @click="router.push('/submit')">继续评分</el-button>
+        <el-button type="success" @click="submitRevision">提交修改版</el-button>
         <el-button @click="router.push('/history')">查看历史</el-button>
       </div>
     </template>
@@ -235,13 +328,16 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { CircleCloseFilled, SuccessFilled, WarningFilled } from '@element-plus/icons-vue'
-import { getEssayDetail } from '@/api/essay'
+import { getEssayDetail, retryEssay } from '@/api/essay'
 import type { EssayScoreResponse } from '@/types'
+import { buildHighlightedSegments } from '@/utils/annotationHighlight'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
+const retrying = ref(false)
 const detail = ref<EssayScoreResponse | null>(null)
 const thinkingStepIndex = ref(0)
 let pollingTimer: number | undefined
@@ -255,6 +351,12 @@ const thinkingSteps = [
 ]
 
 const scoring = computed(() => detail.value?.result || null)
+const aiUsage = computed(() => detail.value?.aiUsage || null)
+const highlightedEssaySegments = computed(() => buildHighlightedSegments(
+  detail.value?.essay.content || '',
+  scoring.value?.annotations || []
+))
+const hasHighlightedAnnotations = computed(() => highlightedEssaySegments.value.some((segment) => segment.annotationIndex !== undefined))
 const isPending = computed(() => Boolean(detail.value && ['PENDING', 'SCORING'].includes(detail.value.scoringStatus) && !scoring.value))
 const isFailed = computed(() => detail.value?.scoringStatus === 'FAILED')
 const thinkingProgress = computed(() => 25 + thinkingStepIndex.value * 20)
@@ -342,6 +444,28 @@ function reloadNow() {
   }
 }
 
+function submitRevision() {
+  if (!detail.value?.essay.id) return
+  router.push({ path: '/submit', query: { parentEssayId: String(detail.value.essay.id) } })
+}
+
+async function handleRetry() {
+  const id = Number(route.params.id)
+  if (!id || retrying.value) return
+  retrying.value = true
+  try {
+    detail.value = await retryEssay(id)
+    ElMessage.success('已重新进入 AI Thinking，请稍等')
+    if (isPending.value) {
+      startPolling()
+    }
+  } catch (error) {
+    console.error('重试失败:', error)
+  } finally {
+    retrying.value = false
+  }
+}
+
 function dimensionPercentage(score: number, maxScore: number) {
   if (!maxScore) return 0
   return Math.round((score / maxScore) * 100)
@@ -366,6 +490,36 @@ function statusLabel(status: string) {
   if (status === 'FAILED') return '失败'
   return status
 }
+
+function usageSourceLabel(source?: string) {
+  if (source === 'PROVIDER') return 'Provider 返回'
+  if (source === 'LOCAL_ESTIMATE') return '本地估算'
+  if (source === 'MIXED') return '混合统计'
+  return '未返回用量'
+}
+
+function formatToken(value?: number, source?: string) {
+  if (value === undefined || value === null) return '未返回'
+  const prefix = source === 'LOCAL_ESTIMATE' || source === 'MIXED' ? '约 ' : ''
+  return `${prefix}${value.toLocaleString()}`
+}
+
+function formatCost(value?: number, currency?: string, source?: string) {
+  if (value === undefined || value === null) return '未配置单价'
+  const prefix = source === 'LOCAL_ESTIMATE' || source === 'MIXED' ? '约 ' : ''
+  return `${prefix}${currency || ''} ${Number(value).toFixed(6)}`.trim()
+}
+
+function highlightClass(severity?: string) {
+  if (severity === 'HIGH' || severity === '严重') return 'highlight-high'
+  if (severity === 'LOW' || severity === '轻微') return 'highlight-low'
+  return 'highlight-medium'
+}
+
+function scrollToAnnotation(index?: number) {
+  if (index === undefined) return
+  document.getElementById(`annotation-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
 </script>
 
 <style scoped>
@@ -386,6 +540,10 @@ function statusLabel(status: string) {
 
 .pending-info {
   margin-top: 24px;
+}
+
+.failed-info {
+  margin-top: 18px;
 }
 
 .thinking-step {
@@ -467,6 +625,31 @@ function statusLabel(status: string) {
   white-space: pre-wrap;
 }
 
+.reference-essay {
+  margin-top: 12px;
+}
+
+.essay-highlight {
+  padding: 1px 3px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.highlight-high {
+  background: #fde2e2;
+  color: #c45656;
+}
+
+.highlight-medium {
+  background: #faecd8;
+  color: #b88230;
+}
+
+.highlight-low {
+  background: #e1f3d8;
+  color: #529b2e;
+}
+
 .evidence-block,
 .improvement-block {
   margin-top: 10px;
@@ -480,6 +663,10 @@ function statusLabel(status: string) {
 .plain-list {
   margin-left: 18px;
   line-height: 1.8;
+}
+
+.usage-details {
+  margin-top: 14px;
 }
 
 .full-height {

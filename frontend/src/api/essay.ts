@@ -14,3 +14,7 @@ export function getHistory(page: number = 0, size: number = 10) {
 export function getEssayDetail(id: number) {
   return request.get<EssayScoreResponse>(`/essays/${id}`)
 }
+
+export function retryEssay(id: number) {
+  return request.post<EssayScoreResponse>(`/essays/${id}/retry`)
+}

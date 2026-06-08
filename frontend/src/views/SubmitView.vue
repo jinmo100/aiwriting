@@ -22,6 +22,33 @@
         </template>
       </el-alert>
 
+      <el-alert
+        v-if="!configStore.loading && configStore.configs.length === 0"
+        class="config-alert"
+        title="请先添加 AI 模型配置"
+        type="warning"
+        show-icon
+        :closable="false"
+      >
+        <template #default>
+          <div>当前账号还没有可用配置。请先填写 Provider、模型和 API Key，再提交作文评分。</div>
+          <el-button class="mt-8" size="small" type="primary" @click="router.push('/config')">去配置</el-button>
+        </template>
+      </el-alert>
+
+      <el-alert
+        v-if="parentEssayId"
+        class="revision-alert"
+        title="正在提交修改版"
+        type="success"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <div>本次提交会作为原作文 #{{ parentEssayId }} 的新版本保存，便于后续对比分数和问题变化。</div>
+        </template>
+      </el-alert>
+
       <el-form :model="form" label-width="130px">
         <el-form-item label="作文类型" required>
           <el-select v-model="form.essayType" placeholder="请选择作文类型" class="full-width">
@@ -82,8 +109,14 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" @click="handleSubmit" :loading="loading" size="large">
-            {{ loading ? 'AI Thinking...' : '提交评分' }}
+          <el-button
+            type="primary"
+            @click="handleSubmit"
+            :loading="loading"
+            :disabled="configStore.configs.length === 0"
+            size="large"
+          >
+            {{ loading ? 'AI Thinking...' : (parentEssayId ? '提交修改版评分' : '提交评分') }}
           </el-button>
           <el-button @click="handleClear" :disabled="loading" size="large">清空</el-button>
         </el-form-item>
@@ -94,7 +127,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useConfigStore } from '@/stores/useConfigStore'
 import { useEssayStore } from '@/stores/useEssayStore'
@@ -103,6 +136,7 @@ import type { EssaySubmitRequest, EssayTypeCode } from '@/types'
 import { ESSAY_TYPE_OPTIONS } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const configStore = useConfigStore()
 const essayStore = useEssayStore()
 const loading = ref(false)
@@ -125,6 +159,11 @@ const form = ref<EssaySubmitRequest>({
 })
 
 const essayTypeOptions = ESSAY_TYPE_OPTIONS
+const parentEssayId = computed(() => {
+  const raw = Array.isArray(route.query.parentEssayId) ? route.query.parentEssayId[0] : route.query.parentEssayId
+  const id = Number(raw)
+  return Number.isFinite(id) && id > 0 ? id : undefined
+})
 
 const selectedType = computed(() => {
   return essayTypeOptions.find(item => item.code === form.value.essayType) || essayTypeOptions[0]
@@ -178,7 +217,8 @@ async function handleSubmit() {
       essayType: form.value.essayType as EssayTypeCode,
       taskPrompt: form.value.taskPrompt?.trim() || undefined,
       configId: form.value.configId,
-      idempotencyKey: createIdempotencyKey()
+      idempotencyKey: createIdempotencyKey(),
+      parentEssayId: parentEssayId.value
     }
     savePending(payload.idempotencyKey)
     const result = await submitEssay(payload)
@@ -235,7 +275,8 @@ function savePending(idempotencyKey?: string, essayId?: number) {
     idempotencyKey,
     essayId,
     createdAt: Date.now(),
-    essayType: form.value.essayType
+    essayType: form.value.essayType,
+    parentEssayId: parentEssayId.value
   }))
 }
 </script>
@@ -274,6 +315,18 @@ function savePending(idempotencyKey?: string, essayId?: number) {
 
 .thinking-alert {
   margin-bottom: 18px;
+}
+
+.config-alert {
+  margin-bottom: 18px;
+}
+
+.revision-alert {
+  margin-bottom: 18px;
+}
+
+.mt-8 {
+  margin-top: 8px;
 }
 
 .thinking-step {

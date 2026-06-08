@@ -30,6 +30,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="essayTypeDisplayName" label="作文类型" min-width="150" />
+        <el-table-column label="版本" width="80">
+          <template #default="{ row }">v{{ row.versionNo || 1 }}</template>
+        </el-table-column>
         <el-table-column prop="taskPromptSummary" label="题目摘要" min-width="180" show-overflow-tooltip />
         <el-table-column prop="wordCount" label="作文字数" width="100" />
         <el-table-column prop="nativeScoreDisplay" label="原生分" width="110">

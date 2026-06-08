@@ -16,6 +16,9 @@ export interface ApiConfig {
   maxTokens?: number
   timeoutSeconds?: number
   modelParametersJson?: string
+  inputTokenPricePerMillion?: number
+  outputTokenPricePerMillion?: number
+  currency?: string
   isDefault: boolean
   hasApiKey?: boolean
   apiKeyPreview?: string
@@ -39,6 +42,9 @@ export interface ApiConfigRequest {
   maxTokens?: number
   timeoutSeconds?: number
   modelParametersJson?: string
+  inputTokenPricePerMillion?: number
+  outputTokenPricePerMillion?: number
+  currency?: string
   isDefault?: boolean
 }
 
@@ -89,6 +95,33 @@ export interface ConfigSecurityPolicy {
   allowApiKeyReveal: boolean
 }
 
+// 用户认证相关类型
+export interface AuthUser {
+  id: number
+  username: string
+  email: string
+  displayName?: string
+  role: 'USER' | 'ADMIN' | string
+  status: 'ACTIVE' | 'DISABLED' | string
+}
+
+export interface AuthResponse {
+  authenticated: boolean
+  user: AuthUser | null
+}
+
+export interface LoginRequest {
+  usernameOrEmail: string
+  password: string
+}
+
+export interface RegisterRequest {
+  username: string
+  email: string
+  password: string
+  displayName?: string
+}
+
 export type EssayTypeCode =
   | 'GENERAL'
   | 'JUNIOR_GENERAL'
@@ -136,6 +169,9 @@ export interface Essay {
   content: string
   wordCount: number
   charCount: number
+  essayGroupId?: number
+  versionNo?: number
+  parentEssayId?: number
   createdAt: string
 }
 
@@ -145,6 +181,7 @@ export interface EssaySubmitRequest {
   taskPrompt?: string
   configId?: number
   idempotencyKey?: string
+  parentEssayId?: number
 }
 
 export interface ScoreValue {
@@ -181,6 +218,7 @@ export interface RubricDimensionScore {
 export interface RubricAnnotation {
   type: string
   severity: string
+  quote?: string
   original: string
   context: string
   message: string
@@ -192,6 +230,12 @@ export interface RubricSummary {
   strengths: string[]
   priorityImprovements: string[]
   overallFeedback: string
+}
+
+export interface ReferenceEssay {
+  title?: string
+  content: string
+  notes: string[]
 }
 
 export interface InputAnalysis {
@@ -213,6 +257,42 @@ export interface RubricScoringResult {
   summary: RubricSummary
   safetyNotice?: string
   inputAnalysis?: InputAnalysis
+  referenceEssay?: ReferenceEssay | null
+}
+
+export interface AiInvocationLog {
+  id: number
+  purpose: string
+  provider?: string
+  endpointType?: string
+  model?: string
+  providerRequestId?: string
+  status: string
+  latencyMs?: number
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  usageSource: 'PROVIDER' | 'LOCAL_ESTIMATE' | 'MIXED' | 'UNAVAILABLE' | string
+  estimatedCost?: number
+  currency?: string
+  failureCode?: string
+  failureMessage?: string
+  createdAt?: string
+}
+
+export interface AiUsageSummary {
+  provider?: string
+  endpointType?: string
+  model?: string
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+  latencyMs?: number
+  usageSource: 'PROVIDER' | 'LOCAL_ESTIMATE' | 'MIXED' | 'UNAVAILABLE' | string
+  estimatedCost?: number
+  currency?: string
+  invocationCount: number
+  invocations: AiInvocationLog[]
 }
 
 export interface EssayScoreResponse {
@@ -224,6 +304,7 @@ export interface EssayScoreResponse {
   aiModel?: string
   tokensUsed?: number
   processingTime?: number
+  aiUsage?: AiUsageSummary
   rubricType?: EssayTypeCode
   rubricVersion?: string
   nativeScore?: number
@@ -235,6 +316,8 @@ export interface EssayScoreResponse {
   contentHash?: string
   errorCode?: string
   errorMessage?: string
+  attemptCount?: number
+  retryable?: boolean
   createdAt?: string
 }
 
@@ -245,6 +328,9 @@ export interface EssayHistoryItem {
   taskPromptSummary: string
   contentSummary: string
   wordCount: number
+  essayGroupId?: number
+  versionNo?: number
+  parentEssayId?: number
   nativeScoreDisplay?: string
   normalizedScore?: number
   gradeLabel?: string
@@ -267,4 +353,23 @@ export interface PageResponse<T> {
   totalElements: number
   totalPages: number
   currentPage: number
+}
+
+export interface DashboardTypeCount {
+  essayType: EssayTypeCode
+  essayTypeDisplayName: string
+  count: number
+}
+
+export interface DashboardSummary {
+  totalEssays: number
+  completedEssays: number
+  failedEssays: number
+  scoringEssays: number
+  averageNormalizedScore?: number
+  bestNormalizedScore?: number
+  submissionsLast7Days: number
+  submissionsLast30Days: number
+  submissionsLast90Days: number
+  typeDistribution: DashboardTypeCount[]
 }
