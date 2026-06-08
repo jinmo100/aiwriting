@@ -55,6 +55,7 @@
 - 前端 dev server 在 `127.0.0.1:5173` 启动成功，`/login` 可访问。
 - 已通过 smoke test 覆盖注册、Cookie Session 下当前用户、dashboard 空账号汇总、当前用户配置空列表。
 - 未调用真实 AI Provider；真实评分端到端仍依赖用户先配置自己的 Provider/API Key。
+- 纠偏记录：这次临时本机 PostgreSQL/Redis 已清理；后续运行验收必须使用 `.env.dev.local` 指向的真实数据库、Redis 和 Provider Key，不能为了跑通而自行安装本机 PostgreSQL/Redis 或临时搭替代运行时。
 
 ## 2. 同类产品能力对标
 

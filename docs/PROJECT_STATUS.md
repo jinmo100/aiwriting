@@ -223,6 +223,12 @@ Redis:      redis://localhost:6379/0
 
 远端数据库/Redis 通过 `.env.dev.local` 覆盖；SSH 隧道需要显式启用。
 
+运行验收约束：
+
+- 可以使用 `.env.dev.local` 中的真实数据库、Redis 和 Provider Key；当前开发数据不重要。
+- 不要为了跑通验收自行安装本机 PostgreSQL/Redis，也不要绕开 `.env.dev.local` 临时搭替代运行时。
+- 如果 `.env.dev.local` 指向的服务不可达，应优先启动/修复对应真实服务或 SSH 隧道，并明确报告阻塞。
+
 ## 当前验证
 
 ```powershell
@@ -256,6 +262,7 @@ Vite chunk 体积警告属于性能优化项，不阻塞功能。
 
 本次为本机临时运行时 smoke test，不使用 `.env.dev.local` 中的真实业务数据库和 Provider Key：
 
+- 纠偏说明：这次临时运行时已经清理；后续运行验收不得沿用这种做法，必须使用 `.env.dev.local` 指向的真实数据库/Redis/Provider 配置。
 - PostgreSQL 18.4 临时实例：`127.0.0.1:55432`，数据目录 `build/runtime-smoke/pgdata`。
 - Redis 8.8 临时实例：`127.0.0.1:56379`。
 - 后端启动：通过临时 `DEV_DB_HOST/DEV_DB_PORT/DEV_DB_NAME/DEV_DB_USER/DEV_DB_PASSWORD/DEV_REDIS_URL` 覆盖 dev profile，Flyway schema 成功迁移到 `V9`。

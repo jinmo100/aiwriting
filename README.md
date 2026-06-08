@@ -48,6 +48,12 @@ Copy-Item .env.dev.example .env.dev.local
 
 编辑 `.env.dev.local`，填入本机真实值，例如 `DEV_DB_PASSWORD`、`DEV_REDIS_URL`、`ESSAY_EVALUATOR_SECRET_KEY`。该文件已被 `.gitignore` 忽略，不能提交真实密码、API Key、远端地址或 SSH Key 路径。
 
+运行验收约束：
+
+- 可以使用 `.env.dev.local` 中的真实数据库、Redis 和 Provider Key；当前开发数据不重要。
+- 不要为了跑通验收自行安装本机 PostgreSQL/Redis，也不要绕开 `.env.dev.local` 临时搭替代运行时。
+- 如果 `.env.dev.local` 指向的服务不可达，应优先启动/修复对应真实服务或 SSH 隧道，并明确报告阻塞。
+
 ### 3. 启动后端
 
 ```powershell
@@ -206,6 +212,7 @@ npm run build
 
 本次 smoke test 使用临时本机运行时，不读取或打印 `.env.dev.local` 中的真实 Provider Key / 数据库密码：
 
+- 纠偏说明：这次临时运行时已经清理；后续运行验收不得沿用这种做法，必须使用 `.env.dev.local` 指向的真实数据库/Redis/Provider 配置。
 - PostgreSQL 18.4：临时数据目录 `build/runtime-smoke/pgdata`，监听 `127.0.0.1:55432`。
 - Redis 8.8：临时监听 `127.0.0.1:56379`。
 - 后端：通过临时 `DEV_DB_*` / `DEV_REDIS_URL` 环境变量启动，Flyway 成功迁移到 `V9`，`GET /api/auth/me` 返回 200。
