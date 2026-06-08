@@ -16,6 +16,12 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+server:
+  servlet:
+    session:
+      cookie:
+        secure: ${ESSAY_EVALUATOR_SESSION_COOKIE_SECURE:true}
+
 logging:
   level:
     root: INFO
@@ -25,4 +31,5 @@ logging:
 essay-evaluator:
   security:
     encryption-key: ${ESSAY_EVALUATOR_SECRET_KEY}
-    allow-api-key-reveal: false
+  auth:
+    registration-enabled: ${ESSAY_EVALUATOR_REGISTRATION_ENABLED:true}

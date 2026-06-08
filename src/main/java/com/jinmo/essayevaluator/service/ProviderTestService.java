@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 public class ProviderTestService {
 
     private final ApiConfigMapper apiConfigMapper;
+    private final ApiConfigService apiConfigService;
     private final ProviderAdapterRegistry providerAdapterRegistry;
     private final ProviderEndpointResolver endpointResolver;
     private final ObjectMapper objectMapper;
@@ -122,11 +123,7 @@ public class ProviderTestService {
     }
 
     private ApiConfig loadConfig(Long configId) {
-        ApiConfig config = apiConfigMapper.selectById(configId);
-        if (config == null) {
-            throw new BusinessException("配置不存在");
-        }
-        return config;
+        return apiConfigService.loadUsableConfig(configId);
     }
 
     private ApiConfig toTemporaryConfig(ProviderTestRequest request) {

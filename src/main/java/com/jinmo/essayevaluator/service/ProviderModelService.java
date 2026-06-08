@@ -11,11 +11,9 @@ import com.jinmo.essayevaluator.ai.provider.ProviderModelCacheKeyBuilder;
 import com.jinmo.essayevaluator.ai.provider.ProviderModelInfo;
 import com.jinmo.essayevaluator.ai.provider.ProviderModelListParser;
 import com.jinmo.essayevaluator.ai.provider.ProviderType;
-import com.jinmo.essayevaluator.common.exception.BusinessException;
 import com.jinmo.essayevaluator.domain.dto.ProviderModelsFetchRequest;
 import com.jinmo.essayevaluator.domain.dto.ProviderModelsResponse;
 import com.jinmo.essayevaluator.domain.entity.ApiConfig;
-import com.jinmo.essayevaluator.mapper.ApiConfigMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
@@ -33,7 +31,7 @@ public class ProviderModelService {
 
     private static final Duration MODEL_LIST_TTL = Duration.ofMinutes(10);
 
-    private final ApiConfigMapper apiConfigMapper;
+    private final ApiConfigService apiConfigService;
     private final ApiKeyResolver apiKeyResolver;
     private final ProviderEndpointResolver endpointResolver;
     private final ProviderModelListParser modelListParser;
@@ -48,10 +46,7 @@ public class ProviderModelService {
     }
 
     public ProviderModelsResponse fetchModels(Long configId, boolean forceRefresh) {
-        ApiConfig config = apiConfigMapper.selectById(configId);
-        if (config == null) {
-            throw new BusinessException("配置不存在");
-        }
+        ApiConfig config = apiConfigService.loadUsableConfig(configId);
         ProviderType providerType = config.getProviderType() != null
             ? config.getProviderType()
             : ProviderType.OPENAI_CHAT_COMPLETIONS;

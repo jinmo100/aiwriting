@@ -21,7 +21,7 @@ configurations {
 
 repositories {
     mavenCentral()
-    maven { url 'https://repo.spring.io/milestone' }
+    maven { url = uri('https://repo.spring.io/milestone') }
 }
 
 ext {
@@ -34,6 +34,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.session:spring-session-data-redis'
 
     // MyBatis-Plus
     implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.9'
@@ -68,6 +70,7 @@ dependencies {
 
     // 测试
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -77,6 +80,15 @@ tasks.withType(JavaCompile) {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('scoringBenchmarkReport', JavaExec) {
+    group = 'verification'
+    description = 'Generate the offline scoring consistency benchmark soft-gate report.'
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.jinmo.essayevaluator.benchmark.ScoringBenchmarkReportMain'
+    args layout.buildDirectory.file('reports/scoring-benchmark/report.md').get().asFile.absolutePath
 }
 
 // JAR包名称

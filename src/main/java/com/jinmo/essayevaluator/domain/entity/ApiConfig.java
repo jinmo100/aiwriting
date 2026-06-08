@@ -16,7 +16,13 @@ public class ApiConfig {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long ownerUserId;
+
     private String configName;
+
+    private String visibility;
+
+    private Boolean allowPublicUse;
 
     /**
      * 旧字段：历史 provider/品牌值。新逻辑使用 providerType。
@@ -51,6 +57,12 @@ public class ApiConfig {
     private Integer timeoutSeconds;
 
     private String modelParametersJson;
+
+    private Double inputTokenPricePerMillion;
+
+    private Double outputTokenPricePerMillion;
+
+    private String currency;
 
     private Boolean isDefault;
 

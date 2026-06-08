@@ -18,6 +18,11 @@ spring:
     redis:
       url: ${REDIS_URL:redis://localhost:6379/0}
 
+  session:
+    store-type: redis
+    redis:
+      namespace: essay-evaluator:session
+
   jackson:
     default-property-inclusion: non_null
     serialization:
@@ -46,6 +51,12 @@ mybatis-plus:
 server:
   port: 8080
   servlet:
+    session:
+      timeout: ${ESSAY_EVALUATOR_SESSION_TIMEOUT:7d}
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${ESSAY_EVALUATOR_SESSION_COOKIE_SECURE:false}
     encoding:
       charset: UTF-8
       force: true
@@ -70,5 +81,8 @@ essay-evaluator:
   security:
     encryption-key: ${ESSAY_EVALUATOR_SECRET_KEY:dev-only-essay-evaluator-secret-change-me}
     allow-api-key-reveal: false
+  auth:
+    registration-enabled: ${ESSAY_EVALUATOR_REGISTRATION_ENABLED:true}
+    min-password-length: ${ESSAY_EVALUATOR_MIN_PASSWORD_LENGTH:8}
   idempotency:
     redis-required: ${ESSAY_EVALUATOR_IDEMPOTENCY_REDIS_REQUIRED:false}

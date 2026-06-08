@@ -32,6 +32,7 @@ public class ApiConfigService {
     private final ApiKeyEncryptionService apiKeyEncryptionService;
     private final ProviderEndpointResolver endpointResolver;
     private final ProviderConfigInvalidationService invalidationService;
+    private final CurrentUserService currentUserService;
 
     /**
      * 创建配置
@@ -39,8 +40,12 @@ public class ApiConfigService {
     @Transactional
     public ApiConfigResponse createConfig(ApiConfigCreateRequest request) {
         log.info("创建API配置: {}", request.configName());
+        Long userId = currentUserService.requireUserId();
 
         ApiConfig config = new ApiConfig();
+        config.setOwnerUserId(userId);
+        config.setVisibility("PRIVATE");
+        config.setAllowPublicUse(false);
         config.setConfigName(request.configName());
         config.setProviderType(request.providerType());
         config.setProviderLabel(resolveProviderLabel(request.providerLabel(), request.providerType()));
@@ -53,11 +58,14 @@ public class ApiConfigService {
         config.setMaxTokens(defaultMaxTokens(request.maxTokens()));
         config.setTimeoutSeconds(defaultTimeoutSeconds(request.timeoutSeconds()));
         config.setModelParametersJson(request.modelParametersJson());
+        config.setInputTokenPricePerMillion(request.inputTokenPricePerMillion());
+        config.setOutputTokenPricePerMillion(request.outputTokenPricePerMillion());
+        config.setCurrency(normalizeCurrency(request.currency()));
         config.setIsDefault(request.isDefault() != null ? request.isDefault() : false);
 
         // 如果设置为默认，先重置其他配置
         if (Boolean.TRUE.equals(config.getIsDefault())) {
-            apiConfigMapper.resetAllDefault();
+            apiConfigMapper.resetDefaultForOwner(userId);
         }
 
         apiConfigMapper.insert(config);
@@ -68,8 +76,16 @@ public class ApiConfigService {
      * 获取所有配置
      */
     public List<ApiConfigResponse> getAllConfigs() {
+        Long userId = currentUserService.requireUserId();
         return apiConfigMapper.selectList(
             new LambdaQueryWrapper<ApiConfig>()
+                .and(wrapper -> wrapper
+                    .eq(ApiConfig::getOwnerUserId, userId)
+                    .eq(ApiConfig::getVisibility, "PRIVATE")
+                    .or()
+                    .eq(ApiConfig::getVisibility, "PUBLIC")
+                    .eq(ApiConfig::getAllowPublicUse, true)
+                )
                 .orderByDesc(ApiConfig::getCreatedAt)
         ).stream()
             .map(this::toResponse)
@@ -80,7 +96,7 @@ public class ApiConfigService {
      * 获取配置详情
      */
     public ApiConfigResponse getConfig(Long id) {
-        ApiConfig config = apiConfigMapper.selectById(id);
+        ApiConfig config = loadVisibleConfig(id);
         if (config == null) {
             throw new BusinessException("配置不存在");
         }
@@ -91,9 +107,13 @@ public class ApiConfigService {
      * 获取默认配置
      */
     public ApiConfig getDefaultConfig() {
+        Long userId = currentUserService.requireUserId();
         return apiConfigMapper.selectOne(
             new LambdaQueryWrapper<ApiConfig>()
+                .eq(ApiConfig::getOwnerUserId, userId)
+                .eq(ApiConfig::getVisibility, "PRIVATE")
                 .eq(ApiConfig::getIsDefault, true)
+                .last("LIMIT 1")
         );
     }
 
@@ -104,10 +124,7 @@ public class ApiConfigService {
     public ApiConfigResponse updateConfig(Long id, ApiConfigUpdateRequest request) {
         log.info("更新API配置: {}", id);
 
-        ApiConfig config = apiConfigMapper.selectById(id);
-        if (config == null) {
-            throw new BusinessException("配置不存在");
-        }
+        ApiConfig config = loadOwnedConfig(id);
         ApiConfig oldConfig = copyConfig(config);
 
         config.setConfigName(request.configName());
@@ -124,10 +141,13 @@ public class ApiConfigService {
         config.setMaxTokens(defaultMaxTokens(request.maxTokens()));
         config.setTimeoutSeconds(defaultTimeoutSeconds(request.timeoutSeconds()));
         config.setModelParametersJson(request.modelParametersJson());
+        config.setInputTokenPricePerMillion(request.inputTokenPricePerMillion());
+        config.setOutputTokenPricePerMillion(request.outputTokenPricePerMillion());
+        config.setCurrency(normalizeCurrency(request.currency()));
 
         if (request.isDefault() != null) {
             if (Boolean.TRUE.equals(request.isDefault())) {
-                apiConfigMapper.resetAllDefault();
+                apiConfigMapper.resetDefaultForOwner(config.getOwnerUserId());
             }
             config.setIsDefault(request.isDefault());
         }
@@ -138,10 +158,7 @@ public class ApiConfigService {
     }
 
     public String revealApiKey(Long id) {
-        ApiConfig config = apiConfigMapper.selectById(id);
-        if (config == null) {
-            throw new BusinessException("配置不存在");
-        }
+        ApiConfig config = loadOwnedConfig(id);
         return resolvePlainApiKey(config);
     }
 
@@ -171,6 +188,10 @@ public class ApiConfigService {
         return timeoutSeconds != null ? timeoutSeconds : 60;
     }
 
+    private static String normalizeCurrency(String currency) {
+        return StringUtils.hasText(currency) ? currency.trim().toUpperCase() : null;
+    }
+
     private ApiConfigResponse toResponse(ApiConfig config) {
         String previewSource = null;
         try {
@@ -187,11 +208,9 @@ public class ApiConfigService {
     @Transactional
     public void deleteConfig(Long id) {
         log.info("删除API配置: {}", id);
-        ApiConfig config = apiConfigMapper.selectById(id);
+        ApiConfig config = loadOwnedConfig(id);
         apiConfigMapper.deleteById(id);
-        if (config != null) {
-            invalidationService.invalidate(config.getId());
-        }
+        invalidationService.invalidate(config.getId());
     }
 
     /**
@@ -201,13 +220,10 @@ public class ApiConfigService {
     public void setDefault(Long id) {
         log.info("设置默认配置: {}", id);
 
-        ApiConfig config = apiConfigMapper.selectById(id);
-        if (config == null) {
-            throw new BusinessException("配置不存在");
-        }
+        ApiConfig config = loadOwnedConfig(id);
 
-        // 重置所有配置
-        apiConfigMapper.resetAllDefault();
+        // 只重置当前用户自己的默认配置。
+        apiConfigMapper.resetDefaultForOwner(config.getOwnerUserId());
 
         // 设置新的默认配置
         config.setIsDefault(true);
@@ -217,6 +233,9 @@ public class ApiConfigService {
     private static ApiConfig copyConfig(ApiConfig source) {
         ApiConfig copy = new ApiConfig();
         copy.setId(source.getId());
+        copy.setOwnerUserId(source.getOwnerUserId());
+        copy.setVisibility(source.getVisibility());
+        copy.setAllowPublicUse(source.getAllowPublicUse());
         copy.setProviderType(source.getProviderType());
         copy.setBaseUrl(source.getBaseUrl());
         copy.setApiKey(source.getApiKey());
@@ -226,6 +245,48 @@ public class ApiConfigService {
         copy.setMaxTokens(source.getMaxTokens());
         copy.setTimeoutSeconds(source.getTimeoutSeconds());
         copy.setModelParametersJson(source.getModelParametersJson());
+        copy.setInputTokenPricePerMillion(source.getInputTokenPricePerMillion());
+        copy.setOutputTokenPricePerMillion(source.getOutputTokenPricePerMillion());
+        copy.setCurrency(source.getCurrency());
         return copy;
+    }
+
+    public ApiConfig loadUsableConfig(Long configId) {
+        ApiConfig config = loadVisibleConfig(configId);
+        if (config == null) {
+            throw new BusinessException("指定的配置不存在");
+        }
+        return config;
+    }
+
+    private ApiConfig loadOwnedConfig(Long id) {
+        Long userId = currentUserService.requireUserId();
+        ApiConfig config = apiConfigMapper.selectOne(
+            new LambdaQueryWrapper<ApiConfig>()
+                .eq(ApiConfig::getId, id)
+                .eq(ApiConfig::getOwnerUserId, userId)
+                .eq(ApiConfig::getVisibility, "PRIVATE")
+                .last("LIMIT 1")
+        );
+        if (config == null) {
+            throw new BusinessException("配置不存在");
+        }
+        return config;
+    }
+
+    private ApiConfig loadVisibleConfig(Long id) {
+        Long userId = currentUserService.requireUserId();
+        return apiConfigMapper.selectOne(
+            new LambdaQueryWrapper<ApiConfig>()
+                .eq(ApiConfig::getId, id)
+                .and(wrapper -> wrapper
+                    .eq(ApiConfig::getOwnerUserId, userId)
+                    .eq(ApiConfig::getVisibility, "PRIVATE")
+                    .or()
+                    .eq(ApiConfig::getVisibility, "PUBLIC")
+                    .eq(ApiConfig::getAllowPublicUse, true)
+                )
+                .last("LIMIT 1")
+        );
     }
 }

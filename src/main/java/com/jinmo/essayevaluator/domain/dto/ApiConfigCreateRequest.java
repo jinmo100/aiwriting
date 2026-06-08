@@ -29,6 +29,9 @@ public record ApiConfigCreateRequest(
     Integer maxTokens,
     Integer timeoutSeconds,
     String modelParametersJson,
+    Double inputTokenPricePerMillion,
+    Double outputTokenPricePerMillion,
+    String currency,
     Boolean isDefault
 ) {
 }

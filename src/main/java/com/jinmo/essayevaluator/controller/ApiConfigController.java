@@ -1,7 +1,6 @@
 package com.jinmo.essayevaluator.controller;
 
 import com.jinmo.essayevaluator.common.response.ApiResponse;
-import com.jinmo.essayevaluator.common.exception.BusinessException;
 import com.jinmo.essayevaluator.domain.dto.ApiConfigCreateRequest;
 import com.jinmo.essayevaluator.domain.dto.ApiConfigResponse;
 import com.jinmo.essayevaluator.domain.dto.ApiConfigUpdateRequest;
@@ -10,17 +9,20 @@ import com.jinmo.essayevaluator.domain.dto.ProviderModelsResponse;
 import com.jinmo.essayevaluator.domain.dto.ProviderTestRequest;
 import com.jinmo.essayevaluator.domain.dto.ProviderTestResponse;
 import com.jinmo.essayevaluator.service.ApiConfigService;
+import com.jinmo.essayevaluator.service.CurrentUserService;
 import com.jinmo.essayevaluator.service.ProviderModelService;
 import com.jinmo.essayevaluator.service.ProviderTestService;
+import com.jinmo.essayevaluator.service.RateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.time.Duration;
 
 /**
  * API配置控制器
@@ -34,9 +36,8 @@ public class ApiConfigController {
     private final ApiConfigService apiConfigService;
     private final ProviderModelService providerModelService;
     private final ProviderTestService providerTestService;
-
-    @Value("${essay-evaluator.security.allow-api-key-reveal:false}")
-    private boolean allowApiKeyReveal;
+    private final RateLimitService rateLimitService;
+    private final CurrentUserService currentUserService;
 
     @Operation(summary = "创建API配置")
     @PostMapping
@@ -53,7 +54,7 @@ public class ApiConfigController {
     @Operation(summary = "获取配置页安全策略")
     @GetMapping("/security-policy")
     public ApiResponse<Map<String, Boolean>> getSecurityPolicy() {
-        return ApiResponse.success(Map.of("allowApiKeyReveal", allowApiKeyReveal));
+        return ApiResponse.success(Map.of("allowApiKeyReveal", true));
     }
 
     @Operation(summary = "获取配置详情")
@@ -73,16 +74,16 @@ public class ApiConfigController {
 
     @Operation(summary = "显示完整 API Key（仅允许环境）")
     @PostMapping("/{id}/reveal-api-key")
-    public ApiResponse<Map<String, String>> revealApiKey(@PathVariable Long id) {
-        if (!allowApiKeyReveal) {
-            throw new BusinessException("当前环境不允许查看完整 API Key");
-        }
+    public ApiResponse<Map<String, String>> revealApiKey(@PathVariable Long id, HttpServletResponse response) {
+        rateLimitService.check("api-key:reveal:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
+        response.setHeader("Cache-Control", "no-store");
         return ApiResponse.success(Map.of("apiKey", apiConfigService.revealApiKey(id)));
     }
 
     @Operation(summary = "使用未保存配置获取模型列表")
     @PostMapping("/models/fetch")
     public ApiResponse<ProviderModelsResponse> fetchModels(@Valid @RequestBody ProviderModelsFetchRequest request) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerModelService.fetchModels(request));
     }
 
@@ -92,30 +93,35 @@ public class ApiConfigController {
         @PathVariable Long id,
         @RequestParam(defaultValue = "false") boolean forceRefresh
     ) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerModelService.fetchModels(id, forceRefresh));
     }
 
     @Operation(summary = "使用未保存配置测试连接")
     @PostMapping("/test-connection")
     public ApiResponse<ProviderTestResponse> testConnection(@Valid @RequestBody ProviderTestRequest request) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerTestService.testConnection(request));
     }
 
     @Operation(summary = "使用已保存配置测试连接")
     @PostMapping("/{id}/test-connection")
     public ApiResponse<ProviderTestResponse> testConnectionByConfig(@PathVariable Long id) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerTestService.testConnection(id));
     }
 
     @Operation(summary = "使用未保存配置测试结构化输出")
     @PostMapping("/test-structured-output")
     public ApiResponse<ProviderTestResponse> testStructuredOutput(@Valid @RequestBody ProviderTestRequest request) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerTestService.testStructuredOutput(request));
     }
 
     @Operation(summary = "使用已保存配置测试结构化输出")
     @PostMapping("/{id}/test-structured-output")
     public ApiResponse<ProviderTestResponse> testStructuredOutputByConfig(@PathVariable Long id) {
+        rateLimitService.check("provider:test:user:" + currentUserService.requireUserId(), 10, Duration.ofMinutes(1));
         return ApiResponse.success(providerTestService.testStructuredOutput(id));
     }
 
