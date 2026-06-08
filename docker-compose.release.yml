@@ -1,0 +1,63 @@
+name: essay-evaluator
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-essay_evaluator}
+      POSTGRES_USER: ${POSTGRES_USER:-essay_evaluator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-essay_evaluator} -d ${POSTGRES_DB:-essay_evaluator}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/jinmo100/essay-evaluator-backend}:${APP_VERSION:-latest}
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${POSTGRES_DB:-essay_evaluator}
+      DB_USER: ${POSTGRES_USER:-essay_evaluator}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      ESSAY_EVALUATOR_SECRET_KEY: ${ESSAY_EVALUATOR_SECRET_KEY:?Set ESSAY_EVALUATOR_SECRET_KEY in .env}
+      ESSAY_EVALUATOR_REGISTRATION_ENABLED: ${ESSAY_EVALUATOR_REGISTRATION_ENABLED:-true}
+      ESSAY_EVALUATOR_SESSION_COOKIE_SECURE: ${ESSAY_EVALUATOR_SESSION_COOKIE_SECURE:-false}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8}
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/jinmo100/essay-evaluator-frontend}:${APP_VERSION:-latest}
+    ports:
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8088}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,20 +1,23 @@
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk-jammy AS builder
+
+WORKDIR /workspace
+
+# Build inside the image so VPS users never need a local JDK or Gradle install.
+COPY . .
+RUN chmod +x gradlew && ./gradlew bootJar --no-daemon
+
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-# 安装必要的工具
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN groupadd --system essay && useradd --system --gid essay --home-dir /app essay
 
-# 复制jar包
-COPY build/libs/essay-evaluator.jar app.jar
+COPY --from=builder /workspace/build/libs/essay-evaluator.jar app.jar
 
-# 暴露端口
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8"
+
 EXPOSE 8080
 
-# JVM参数
-ENV JAVA_OPTS="-XX:+UseZGC -XX:+ZGenerational -Xmx2g -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -Dfile.encoding=UTF-8"
+USER essay
 
-# 启动应用
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
