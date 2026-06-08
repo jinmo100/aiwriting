@@ -1,0 +1,365 @@
+{
+  "version": "benchmark-v1",
+  "cases": [
+    {
+      "id": "ZK-001",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "Healthy school life",
+      "taskPrompt": "你校英语角正在征文，请以 How to keep healthy at school 为题写一篇短文。",
+      "content": "Health is important for every student. At school, I try to eat breakfast every morning and drink enough water. I also take part in running after class, because sports make me stronger and happier. When I feel tired, I talk with my friends or listen to soft music. A healthy school life helps me study better.",
+      "expectedNormalizedMin": 82,
+      "expectedNormalizedMax": 92,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "task-completion",
+        "clear-structure",
+        "basic-accuracy"
+      ]
+    },
+    {
+      "id": "ZK-002",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "A volunteer day",
+      "taskPrompt": "请根据一次志愿者活动经历，写一篇英语短文介绍活动和收获。",
+      "content": "Last Saturday our class went to a community center to help old people. We cleaned the rooms, read newspapers for them and sang songs together. At first I was a little shy, but an old man smiled at me and said thanks. I learned that small things can bring warm feelings to others. I hope to join more volunteer activities.",
+      "expectedNormalizedMin": 78,
+      "expectedNormalizedMax": 88,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "narrative",
+        "reflection",
+        "coherence"
+      ]
+    },
+    {
+      "id": "ZK-003",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "My favorite book",
+      "taskPrompt": "学校读书节要求介绍一本你喜欢的书，并说明原因。",
+      "content": "My favorite book is The Old Man and the Sea. It tells a story about an old fisherman who never gives up. The language is not very easy for me, but the story is exciting. From the old man, I learn to be brave when I meet problems. Reading this book also helps me know more about life and dreams.",
+      "expectedNormalizedMin": 72,
+      "expectedNormalizedMax": 84,
+      "expectedGradeBand": "middle",
+      "focusTags": [
+        "book-review",
+        "reasoning",
+        "lexical-range"
+      ]
+    },
+    {
+      "id": "ZK-004",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "Protect the environment",
+      "taskPrompt": "请写一篇关于中学生如何保护环境的倡议短文。",
+      "content": "We should protect the environment because the earth is our home. In my opinion, students can do many useful things. We can turn off lights when we leave the classroom and use both sides of paper. We should not throw rubbish everywhere. If everyone saves water and plants more trees, our city will become cleaner and more beautiful.",
+      "expectedNormalizedMin": 80,
+      "expectedNormalizedMax": 90,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "proposal",
+        "examples",
+        "grammar-control"
+      ]
+    },
+    {
+      "id": "ZK-005",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "A difficult choice",
+      "taskPrompt": "请描述你曾经面临的一次选择，以及你从中学到了什么。",
+      "content": "Once I had to choose between a basketball match and my piano lesson. I wanted to play with my team, but the lesson was also important. After thinking for a long time, I called my teacher and explained the reason politely. She changed the time for me. I learned that communication can solve many problems and we should be responsible for our plans.",
+      "expectedNormalizedMin": 76,
+      "expectedNormalizedMax": 87,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "personal-experience",
+        "lesson",
+        "organization"
+      ]
+    },
+    {
+      "id": "ZK-006",
+      "essayType": "JUNIOR_ZHONGKAO",
+      "title": "Improve English speaking",
+      "taskPrompt": "请给同学介绍提高英语口语的建议。",
+      "content": "Many students are afraid of speaking English. I think practice is the best way. We can read English aloud every day, watch simple English videos and talk with classmates after class. It is normal to make mistakes, so we should not be shy. If we keep speaking, our pronunciation and confidence will become better step by step.",
+      "expectedNormalizedMin": 74,
+      "expectedNormalizedMax": 86,
+      "expectedGradeBand": "middle",
+      "focusTags": [
+        "advice",
+        "audience-awareness",
+        "fluency"
+      ]
+    },
+    {
+      "id": "GK-001",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Invite a foreign teacher",
+      "taskPrompt": "假定你是李华，请给外教写邮件邀请他参加班级英语角，并说明时间、地点和活动内容。",
+      "content": "Dear Mr. Wilson, I am writing to invite you to our English Corner, which will be held in the school library this Friday afternoon. We are going to discuss how to learn English through movies and short speeches. Your experience will surely encourage us and make the activity more meaningful. If it is convenient for you, please let me know. I am looking forward to your reply.",
+      "expectedNormalizedMin": 84,
+      "expectedNormalizedMax": 94,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "email",
+        "politeness",
+        "task-points"
+      ]
+    },
+    {
+      "id": "GK-002",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Labor education",
+      "taskPrompt": "你校英文报正在讨论劳动教育，请写一篇短文说明劳动教育的意义。",
+      "content": "Labor education plays an important role in our growth. By doing housework or joining school activities, we learn practical skills that books cannot fully teach. More importantly, labor helps us understand the value of effort and respect the work of others. In my view, schools should offer more chances for students to cook, clean and serve the community so that we can become responsible young people.",
+      "expectedNormalizedMin": 82,
+      "expectedNormalizedMax": 92,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "argument",
+        "examples",
+        "maturity"
+      ]
+    },
+    {
+      "id": "GK-003",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Traditional culture fair",
+      "taskPrompt": "请为学校传统文化节写一则英文介绍，内容包括活动安排和意义。",
+      "content": "Our school will hold a traditional culture fair next Monday. Students can enjoy paper cutting, calligraphy and local opera in different classrooms. There will also be a short lecture about the history behind these art forms. I believe the fair will not only make campus life more colorful but also help us feel proud of Chinese culture. Everyone is welcome to take part.",
+      "expectedNormalizedMin": 78,
+      "expectedNormalizedMax": 89,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "notice",
+        "culture",
+        "clarity"
+      ]
+    },
+    {
+      "id": "GK-004",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Online learning balance",
+      "taskPrompt": "请就高中生如何合理利用线上学习资源发表看法。",
+      "content": "Online learning gives senior students more choices, but it also requires self-control. Some students watch lessons again and solve difficult questions at their own pace. However, others may waste time on unrelated websites. To make good use of online resources, we should set clear goals, take notes carefully and keep a balance between screen time and physical exercise. Used wisely, technology can support real learning.",
+      "expectedNormalizedMin": 80,
+      "expectedNormalizedMax": 90,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "balanced-view",
+        "cohesion",
+        "academic-tone"
+      ]
+    },
+    {
+      "id": "GK-005",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Thank a helper",
+      "taskPrompt": "假定你是李华，请写邮件感谢曾帮助你的交换生朋友，并说明帮助带来的影响。",
+      "content": "Dear Alex, I want to say thanks for your help during the speech competition. When I was nervous, you listened to my draft patiently and gave me useful advice on pronunciation and eye contact. Because of your encouragement, I became much more confident on the stage. The prize is important, but your friendship means even more to me. I hope I can help you in the future.",
+      "expectedNormalizedMin": 82,
+      "expectedNormalizedMax": 93,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "thank-you-email",
+        "specific-detail",
+        "tone"
+      ]
+    },
+    {
+      "id": "GK-006",
+      "essayType": "SENIOR_GAOKAO",
+      "title": "Public transport",
+      "taskPrompt": "请写短文倡议同学绿色出行，尽量使用公共交通或骑行。",
+      "content": "Green travel is a simple but powerful way to protect our city. Instead of asking parents to drive us everywhere, we can take buses, use the subway or ride bikes when the distance is not long. These choices reduce traffic and air pollution. They also give us more chances to exercise. I suggest that each class record green travel days and share good ideas every month.",
+      "expectedNormalizedMin": 76,
+      "expectedNormalizedMax": 88,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "proposal",
+        "environment",
+        "specific-actions"
+      ]
+    },
+    {
+      "id": "CET4-001",
+      "essayType": "CET4",
+      "title": "Digital payment",
+      "taskPrompt": "For this part, write an essay on the advantages and risks of digital payment.",
+      "content": "Digital payment has changed daily life in many cities. People can buy tickets, order food and pay bills with a phone, which saves time and reduces the need to carry cash. Nevertheless, users should be careful about passwords and fake links, because convenience may bring security risks. In my opinion, digital payment is helpful as long as people use reliable platforms and develop safe habits.",
+      "expectedNormalizedMin": 78,
+      "expectedNormalizedMax": 88,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "cet4-argument",
+        "balanced-risk",
+        "coherence"
+      ]
+    },
+    {
+      "id": "CET4-002",
+      "essayType": "CET4",
+      "title": "Reading in college",
+      "taskPrompt": "For this part, write an essay on why college students should read beyond textbooks.",
+      "content": "College students should read books beyond textbooks. Professional books give us necessary knowledge, but novels, history and science writing broaden our mind. Reading different subjects also improves language ability and critical thinking. Some students say they are too busy, yet even twenty minutes before sleep can make a difference. A wider reading habit will help us become more thoughtful and creative people.",
+      "expectedNormalizedMin": 74,
+      "expectedNormalizedMax": 85,
+      "expectedGradeBand": "middle",
+      "focusTags": [
+        "cet4-topic",
+        "development",
+        "examples"
+      ]
+    },
+    {
+      "id": "CET4-003",
+      "essayType": "CET4",
+      "title": "Part-time jobs",
+      "taskPrompt": "For this part, write an essay about whether college students should take part-time jobs.",
+      "content": "Part-time jobs can be useful for college students, but they should not replace study. Through a job, students may learn communication skills and understand how society works. They can also earn some money for books or travel. However, if the work takes too much time, grades and health may suffer. Therefore, students should choose suitable jobs and keep a clear priority.",
+      "expectedNormalizedMin": 76,
+      "expectedNormalizedMax": 87,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "balanced-view",
+        "cet4",
+        "conclusion"
+      ]
+    },
+    {
+      "id": "CET6-001",
+      "essayType": "CET6",
+      "title": "Artificial intelligence and employment",
+      "taskPrompt": "For this part, write an essay on how artificial intelligence may influence employment.",
+      "content": "Artificial intelligence is reshaping employment rather than simply destroying jobs. Repetitive tasks in customer service, translation and data processing may be automated, so workers need to upgrade their skills. At the same time, new positions related to model evaluation, data governance and human-machine collaboration are emerging. The key challenge is whether education and companies can help people adapt quickly. With proper training, AI can become a tool for productivity instead of a threat.",
+      "expectedNormalizedMin": 82,
+      "expectedNormalizedMax": 92,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "cet6-depth",
+        "nuance",
+        "abstract-reasoning"
+      ]
+    },
+    {
+      "id": "CET6-002",
+      "essayType": "CET6",
+      "title": "Information overload",
+      "taskPrompt": "For this part, write an essay on how to deal with information overload in the digital age.",
+      "content": "In the digital age, information is abundant but attention is limited. Many people open news apps again and again, yet remember little useful knowledge. To deal with information overload, we should set a clear purpose before searching, compare sources, and leave time for deep reading. Universities can also teach students basic media literacy. Only when we manage information actively can we turn data into understanding.",
+      "expectedNormalizedMin": 80,
+      "expectedNormalizedMax": 90,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "critical-thinking",
+        "solutions",
+        "academic-style"
+      ]
+    },
+    {
+      "id": "CET6-003",
+      "essayType": "CET6",
+      "title": "Interdisciplinary learning",
+      "taskPrompt": "For this part, write an essay on the value of interdisciplinary learning.",
+      "content": "Interdisciplinary learning is increasingly valuable because real problems rarely belong to a single subject. A student who studies computer science and medicine, for example, may design better health applications. Combining literature with sociology can also deepen our understanding of communities. Of course, students need a solid foundation in one field first. On that basis, crossing boundaries encourages innovation and helps graduates communicate with people from different backgrounds.",
+      "expectedNormalizedMin": 78,
+      "expectedNormalizedMax": 89,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "cet6",
+        "complex-topic",
+        "examples"
+      ]
+    },
+    {
+      "id": "IELTS2-001",
+      "essayType": "IELTS_TASK_2",
+      "title": "Public money and arts",
+      "taskPrompt": "Some people think governments should spend money on public services rather than arts. To what extent do you agree or disagree?",
+      "content": "Some people argue that public money should be used only for hospitals, schools and transport, while spending on the arts is unnecessary. I partly agree that basic services must be the first priority, especially in cities where medical care or housing is still inadequate. However, arts also have public value. Museums, concerts and community theaters create shared identity and improve quality of life. Therefore, governments should protect essential services first, but reserve a reasonable budget for accessible cultural programs.",
+      "expectedNormalizedMin": 78,
+      "expectedNormalizedMax": 88,
+      "expectedGradeBand": "band-7-ish",
+      "focusTags": [
+        "ielts-task-response",
+        "balanced-position",
+        "cohesion"
+      ]
+    },
+    {
+      "id": "IELTS2-002",
+      "essayType": "IELTS_TASK_2",
+      "title": "Remote work",
+      "taskPrompt": "More people are working from home. Discuss the advantages and disadvantages and give your opinion.",
+      "content": "Working from home has become common in many industries. Its main advantage is flexibility: employees can save commuting time and arrange their work environment more comfortably. Companies may also reduce office costs. On the other hand, remote work can weaken teamwork and make it difficult for new employees to learn from colleagues. In my opinion, a hybrid model is the best solution, because it combines focused individual work with regular face-to-face communication.",
+      "expectedNormalizedMin": 76,
+      "expectedNormalizedMax": 87,
+      "expectedGradeBand": "band-6.5-7",
+      "focusTags": [
+        "discussion",
+        "opinion",
+        "paragraphing"
+      ]
+    },
+    {
+      "id": "IELTS2-003",
+      "essayType": "IELTS_TASK_2",
+      "title": "Children and competition",
+      "taskPrompt": "Some people believe children should be encouraged to compete, while others think cooperation is more important. Discuss both views and give your opinion.",
+      "content": "Competition can motivate children to set goals and work hard. In sports or exams, a healthy competitive spirit teaches them to handle pressure and accept failure. Nevertheless, cooperation is equally important because most adult problems require teamwork. If children only care about winning, they may ignore empathy and communication. I believe schools should design activities where students compete in teams, so they can pursue excellence while learning to support others.",
+      "expectedNormalizedMin": 80,
+      "expectedNormalizedMax": 90,
+      "expectedGradeBand": "band-7-ish",
+      "focusTags": [
+        "both-views",
+        "position",
+        "idea-development"
+      ]
+    },
+    {
+      "id": "GEN-001",
+      "essayType": "GENERAL",
+      "title": "A memorable trip",
+      "taskPrompt": "",
+      "content": "Last summer I visited a small mountain town with my parents. The trip was memorable not because it was expensive, but because everything felt peaceful. We walked along a river, tasted fresh fruit and watched the sunset from a wooden bridge. I had been worried about school before the trip, but the quiet days helped me relax. Sometimes a simple journey can give people new energy.",
+      "expectedNormalizedMin": 76,
+      "expectedNormalizedMax": 88,
+      "expectedGradeBand": "upper-middle",
+      "focusTags": [
+        "general-narrative",
+        "description",
+        "reflection"
+      ]
+    },
+    {
+      "id": "GEN-002",
+      "essayType": "GENERAL",
+      "title": "Should students use phones in school",
+      "taskPrompt": "",
+      "content": "Whether students should use phones in school is a difficult question. Phones can help students look up words, take photos of notes and contact parents in an emergency. However, games and short videos may distract them from lessons. I think schools should allow phones for learning tasks but set clear rules during class. Responsible use is better than a simple ban.",
+      "expectedNormalizedMin": 72,
+      "expectedNormalizedMax": 84,
+      "expectedGradeBand": "middle",
+      "focusTags": [
+        "general-argument",
+        "balanced-view",
+        "clarity"
+      ]
+    },
+    {
+      "id": "GEN-003",
+      "essayType": "GENERAL",
+      "title": "The value of patience",
+      "taskPrompt": "",
+      "content": "Patience is a quiet but powerful quality. When people learn a language, play an instrument or build a friendship, quick success is rare. If we give up too early, we may never see progress. Patience does not mean waiting without action; it means practicing regularly and accepting temporary mistakes. In a fast world, patient people often go further because they keep moving step by step.",
+      "expectedNormalizedMin": 80,
+      "expectedNormalizedMax": 91,
+      "expectedGradeBand": "high",
+      "focusTags": [
+        "general-reflection",
+        "abstract-topic",
+        "cohesion"
+      ]
+    }
+  ]
+}
