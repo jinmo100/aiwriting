@@ -22,8 +22,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ScoringIdempotencyService {
 
-    private static final String IDEMPOTENCY_PREFIX = "essay-evaluator:idempotency:";
-    private static final String CONTENT_PREFIX = "essay-evaluator:content-submission:";
+    private static final String USER_PREFIX = "essay-evaluator:user:";
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -41,24 +40,24 @@ public class ScoringIdempotencyService {
         }
     }
 
-    public Optional<Long> findCachedEssayId(String idempotencyKey, String contentHash) {
-        Optional<Long> byKey = readEssayId(idempotencyRedisKey(idempotencyKey));
+    public Optional<Long> findCachedEssayId(Long userId, String idempotencyKey, String contentHash) {
+        Optional<Long> byKey = readEssayId(idempotencyRedisKey(userId, idempotencyKey));
         if (byKey.isPresent()) {
             return byKey;
         }
-        return readEssayId(contentRedisKey(contentHash));
+        return readEssayId(contentRedisKey(userId, contentHash));
     }
 
-    public void cacheScoring(String idempotencyKey, String contentHash, Long essayId) {
-        cache(idempotencyKey, contentHash, essayId, "SCORING", Duration.ofMinutes(30), Duration.ofMinutes(10));
+    public void cacheScoring(Long userId, String idempotencyKey, String contentHash, Long essayId) {
+        cache(userId, idempotencyKey, contentHash, essayId, "SCORING", Duration.ofMinutes(30), Duration.ofMinutes(10));
     }
 
-    public void cacheCompleted(String idempotencyKey, String contentHash, Long essayId) {
-        cache(idempotencyKey, contentHash, essayId, "COMPLETED", Duration.ofHours(24), Duration.ofHours(24));
+    public void cacheCompleted(Long userId, String idempotencyKey, String contentHash, Long essayId) {
+        cache(userId, idempotencyKey, contentHash, essayId, "COMPLETED", Duration.ofHours(24), Duration.ofHours(24));
     }
 
-    public void cacheFailed(String idempotencyKey, String contentHash, Long essayId) {
-        cache(idempotencyKey, contentHash, essayId, "FAILED", Duration.ofMinutes(30), Duration.ofMinutes(30));
+    public void cacheFailed(Long userId, String idempotencyKey, String contentHash, Long essayId) {
+        cache(userId, idempotencyKey, contentHash, essayId, "FAILED", Duration.ofMinutes(30), Duration.ofMinutes(30));
     }
 
     private Optional<Long> readEssayId(String key) {
@@ -79,6 +78,7 @@ public class ScoringIdempotencyService {
     }
 
     private void cache(
+        Long userId,
         String idempotencyKey,
         String contentHash,
         Long essayId,
@@ -89,11 +89,11 @@ public class ScoringIdempotencyService {
         IdempotencyCacheEntry entry = new IdempotencyCacheEntry(status, essayId, contentHash, LocalDateTime.now());
         try {
             String json = objectMapper.writeValueAsString(entry);
-            String key = idempotencyRedisKey(idempotencyKey);
+            String key = idempotencyRedisKey(userId, idempotencyKey);
             if (StringUtils.hasText(key)) {
                 redisTemplate.opsForValue().set(key, json, idempotencyTtl);
             }
-            String contentKey = contentRedisKey(contentHash);
+            String contentKey = contentRedisKey(userId, contentHash);
             if (StringUtils.hasText(contentKey)) {
                 redisTemplate.opsForValue().set(contentKey, json, contentTtl);
             }
@@ -104,12 +104,16 @@ public class ScoringIdempotencyService {
         }
     }
 
-    private String idempotencyRedisKey(String idempotencyKey) {
-        return StringUtils.hasText(idempotencyKey) ? IDEMPOTENCY_PREFIX + idempotencyKey.trim() : null;
+    static String idempotencyRedisKey(Long userId, String idempotencyKey) {
+        return userId != null && StringUtils.hasText(idempotencyKey)
+            ? USER_PREFIX + userId + ":idempotency:" + idempotencyKey.trim()
+            : null;
     }
 
-    private String contentRedisKey(String contentHash) {
-        return StringUtils.hasText(contentHash) ? CONTENT_PREFIX + contentHash.trim() : null;
+    static String contentRedisKey(Long userId, String contentHash) {
+        return userId != null && StringUtils.hasText(contentHash)
+            ? USER_PREFIX + userId + ":content-submission:" + contentHash.trim()
+            : null;
     }
 
     private void handleRedisFailure(String message, Exception e) {

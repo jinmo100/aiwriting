@@ -7,11 +7,11 @@ import com.jinmo.essayevaluator.domain.entity.RubricVersion;
 
 import java.util.List;
 
-final class RubricTestFixtures {
+public final class RubricTestFixtures {
     private RubricTestFixtures() {
     }
 
-    static RubricDefinition generalRubric() {
+    public static RubricDefinition generalRubric() {
         RubricProfile profile = new RubricProfile();
         profile.setId(1L);
         profile.setTypeCode("GENERAL");
@@ -36,7 +36,7 @@ final class RubricTestFixtures {
         ));
     }
 
-    static RubricDefinition ieltsRubric() {
+    public static RubricDefinition ieltsRubric() {
         RubricProfile profile = new RubricProfile();
         profile.setId(2L);
         profile.setTypeCode("IELTS_TASK_2");

@@ -51,6 +51,10 @@ public class EssayScore {
 
     private String errorMessage;
 
+    private Integer attemptCount;
+
+    private String failureDetailJson;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

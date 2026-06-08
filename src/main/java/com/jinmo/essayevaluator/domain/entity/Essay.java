@@ -19,7 +19,15 @@ public class Essay {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long userId;
+
     private String essayType;
+
+    private Long essayGroupId;
+
+    private Integer versionNo;
+
+    private Long parentEssayId;
 
     private String taskPrompt;
 

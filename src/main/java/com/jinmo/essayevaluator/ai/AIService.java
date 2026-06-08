@@ -17,6 +17,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * AI评分服务。
  */
@@ -41,21 +44,23 @@ public class AIService {
 
             String systemPrompt = ScoringPrompt.systemPrompt();
             String userPrompt = ScoringPrompt.buildUserPrompt(essayType, taskPrompt, essayContent, rubric);
+            List<ProviderInvocation> invocations = new ArrayList<>();
 
             long startTime = System.currentTimeMillis();
-            AIProviderResult providerResult = callProvider(systemPrompt, userPrompt, config);
+            AIProviderResult providerResult = callProvider(systemPrompt, userPrompt, config, "SCORING", invocations);
             long duration = System.currentTimeMillis() - startTime;
             log.info("AI评分完成，耗时: {}ms", duration);
 
-            ParsedScoring parsed = parseValidateOrRepair(systemPrompt, userPrompt, providerResult, config, rubric);
+            ParsedScoring parsed = parseValidateOrRepair(systemPrompt, userPrompt, providerResult, config, rubric, invocations);
             AIProviderResult finalProviderResult = parsed.providerResult();
             return new ScoringOutcome(
                 parsed.result(),
                 finalProviderResult.modelName() != null ? finalProviderResult.modelName() : config.getModelName(),
-                finalProviderResult.inputTokens(),
-                finalProviderResult.outputTokens(),
-                finalProviderResult.totalTokens(),
-                finalProviderResult.latencyMillis() != null ? finalProviderResult.latencyMillis() : duration
+                sumInputTokens(invocations),
+                sumOutputTokens(invocations),
+                sumTotalTokens(invocations),
+                sumLatency(invocations) != null ? sumLatency(invocations) : duration,
+                invocations
             );
         } catch (Exception e) {
             log.error("AI评分失败", e);
@@ -63,7 +68,13 @@ public class AIService {
         }
     }
 
-    private AIProviderResult callProvider(String systemPrompt, String userPrompt, ApiConfig config) {
+    private AIProviderResult callProvider(
+        String systemPrompt,
+        String userPrompt,
+        ApiConfig config,
+        String purpose,
+        List<ProviderInvocation> invocations
+    ) {
         ProviderType providerType = config.getProviderType() != null
             ? config.getProviderType()
             : ProviderType.OPENAI_CHAT_COMPLETIONS;
@@ -74,7 +85,9 @@ public class AIService {
             ScoringPrompt.scoringSchema(),
             null
         );
-        return providerAdapterRegistry.get(providerType).generate(request, config);
+        AIProviderResult result = providerAdapterRegistry.get(providerType).generate(request, config);
+        invocations.add(toInvocation(purpose, providerType, result, systemPrompt, userPrompt));
+        return result;
     }
 
     private ParsedScoring parseValidateOrRepair(
@@ -82,14 +95,15 @@ public class AIService {
         String originalPrompt,
         AIProviderResult providerResult,
         ApiConfig config,
-        RubricDefinition rubric
+        RubricDefinition rubric,
+        List<ProviderInvocation> invocations
     ) {
         try {
             return new ParsedScoring(parseAndValidate(providerResult.text(), rubric), providerResult);
         } catch (BusinessException firstFailure) {
             log.warn("评分结构化输出无效，尝试修复一次: {}", firstFailure.getMessage());
             String repairPrompt = buildRepairPrompt(originalPrompt, providerResult.text(), firstFailure.getMessage());
-            AIProviderResult repaired = callProvider(systemPrompt, repairPrompt, config);
+            AIProviderResult repaired = callProvider(systemPrompt, repairPrompt, config, "JSON_REPAIR", invocations);
             return new ParsedScoring(parseAndValidate(repaired.text(), rubric), repaired);
         }
     }
@@ -209,10 +223,106 @@ public class AIService {
         Integer inputTokens,
         Integer outputTokens,
         Integer totalTokens,
-        Long latencyMillis
+        Long latencyMillis,
+        List<ProviderInvocation> invocations
+    ) {
+    }
+
+    public record ProviderInvocation(
+        String purpose,
+        ProviderType providerType,
+        String modelName,
+        String providerRequestId,
+        Integer inputTokens,
+        Integer outputTokens,
+        Integer totalTokens,
+        Long latencyMillis,
+        String usageSource,
+        String status,
+        String failureCode,
+        String failureMessage
     ) {
     }
 
     private record ParsedScoring(RubricScoringResult result, AIProviderResult providerResult) {
+    }
+
+    private static ProviderInvocation toInvocation(
+        String purpose,
+        ProviderType providerType,
+        AIProviderResult result,
+        String systemPrompt,
+        String userPrompt
+    ) {
+        Integer inputTokens = result.inputTokens();
+        Integer outputTokens = result.outputTokens();
+        Integer totalTokens = result.totalTokens();
+        String usageSource = "PROVIDER";
+        if (inputTokens == null && outputTokens == null && totalTokens == null) {
+            usageSource = "LOCAL_ESTIMATE";
+            inputTokens = estimateTokens((systemPrompt == null ? "" : systemPrompt) + "\n" + (userPrompt == null ? "" : userPrompt));
+            outputTokens = estimateTokens(result.text());
+            totalTokens = inputTokens + outputTokens;
+        } else if (totalTokens == null && inputTokens != null && outputTokens != null) {
+            totalTokens = inputTokens + outputTokens;
+        }
+        return new ProviderInvocation(
+            purpose,
+            result.providerType() != null ? result.providerType() : providerType,
+            result.modelName(),
+            result.providerRequestId(),
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            result.latencyMillis(),
+            usageSource,
+            "SUCCESS",
+            null,
+            null
+        );
+    }
+
+    static int estimateTokens(String text) {
+        if (text == null || text.isBlank()) {
+            return 0;
+        }
+        int codePoints = text.codePointCount(0, text.length());
+        return Math.max(1, (int) Math.ceil(codePoints / 4.0));
+    }
+
+    private static Integer sumInputTokens(List<ProviderInvocation> invocations) {
+        return sumInteger(invocations.stream().map(ProviderInvocation::inputTokens).toList());
+    }
+
+    private static Integer sumOutputTokens(List<ProviderInvocation> invocations) {
+        return sumInteger(invocations.stream().map(ProviderInvocation::outputTokens).toList());
+    }
+
+    private static Integer sumTotalTokens(List<ProviderInvocation> invocations) {
+        return sumInteger(invocations.stream().map(ProviderInvocation::totalTokens).toList());
+    }
+
+    private static Long sumLatency(List<ProviderInvocation> invocations) {
+        long total = 0;
+        boolean hasAny = false;
+        for (ProviderInvocation invocation : invocations) {
+            if (invocation.latencyMillis() != null) {
+                total += invocation.latencyMillis();
+                hasAny = true;
+            }
+        }
+        return hasAny ? total : null;
+    }
+
+    private static Integer sumInteger(List<Integer> values) {
+        int total = 0;
+        boolean hasAny = false;
+        for (Integer value : values) {
+            if (value != null) {
+                total += value;
+                hasAny = true;
+            }
+        }
+        return hasAny ? total : null;
     }
 }

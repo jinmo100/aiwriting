@@ -5,7 +5,9 @@ import com.jinmo.essayevaluator.common.response.ApiResponse;
 import com.jinmo.essayevaluator.domain.dto.EssayHistoryItem;
 import com.jinmo.essayevaluator.domain.dto.EssayScoreResponse;
 import com.jinmo.essayevaluator.domain.dto.EssaySubmitRequest;
+import com.jinmo.essayevaluator.service.CurrentUserService;
 import com.jinmo.essayevaluator.service.EssayService;
+import com.jinmo.essayevaluator.service.RateLimitService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.time.Duration;
 
 @Tag(name = "作文评分", description = "作文提交和评分相关接口")
 @RestController
@@ -28,11 +31,21 @@ import java.util.Map;
 public class EssayController {
 
     private final EssayService essayService;
+    private final RateLimitService rateLimitService;
+    private final CurrentUserService currentUserService;
 
     @Operation(summary = "提交作文并异步评分")
     @PostMapping("/submit")
     public ApiResponse<EssayScoreResponse> submitEssay(@Valid @RequestBody EssaySubmitRequest request) {
+        rateLimitService.check("essay:submit:user:" + currentUserService.requireUserId(), 5, Duration.ofMinutes(1));
         return ApiResponse.success("评分任务已提交", essayService.submitAndScore(request));
+    }
+
+    @Operation(summary = "重试失败的评分任务")
+    @PostMapping("/{id}/retry")
+    public ApiResponse<EssayScoreResponse> retryEssay(@PathVariable Long id) {
+        rateLimitService.check("essay:retry:user:" + currentUserService.requireUserId(), 5, Duration.ofMinutes(1));
+        return ApiResponse.success("评分任务已重新提交", essayService.retryScoring(id));
     }
 
     @Operation(summary = "获取历史记录")

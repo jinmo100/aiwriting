@@ -14,6 +14,9 @@ public record EssayResponse(
     String content,
     Integer wordCount,
     Integer charCount,
+    Long essayGroupId,
+    Integer versionNo,
+    Long parentEssayId,
     LocalDateTime createdAt
 ) {
     public static EssayResponse fromEntity(Essay essay) {
@@ -30,6 +33,9 @@ public record EssayResponse(
             essay.getContent(),
             essay.getWordCount(),
             essay.getCharCount(),
+            essay.getEssayGroupId(),
+            essay.getVersionNo(),
+            essay.getParentEssayId(),
             essay.getCreatedAt()
         );
     }

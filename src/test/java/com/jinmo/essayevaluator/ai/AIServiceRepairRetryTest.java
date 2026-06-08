@@ -39,6 +39,11 @@ class AIServiceRepairRetryTest {
         assertThat(outcome.result().normalizedScore().value()).isEqualTo(88.0);
         assertThat(adapter.calls).isEqualTo(2);
         assertThat(adapter.lastPrompt).contains("修复为合法 JSON");
+        assertThat(outcome.invocations()).hasSize(2);
+        assertThat(outcome.invocations().get(0).purpose()).isEqualTo("SCORING");
+        assertThat(outcome.invocations().get(1).purpose()).isEqualTo("JSON_REPAIR");
+        assertThat(outcome.invocations().get(0).usageSource()).isEqualTo("LOCAL_ESTIMATE");
+        assertThat(outcome.totalTokens()).isPositive();
     }
 
     @Test
@@ -64,6 +69,7 @@ class AIServiceRepairRetryTest {
         assertThat(outcome.result().nativeScore().value()).isEqualTo(88.0);
         assertThat(outcome.result().nativeScore().display()).isEqualTo("88/100");
         assertThat(outcome.result().rubric().type()).isEqualTo("GENERAL");
+        assertThat(outcome.invocations()).hasSize(1);
     }
 
     private static ApiConfig config() {

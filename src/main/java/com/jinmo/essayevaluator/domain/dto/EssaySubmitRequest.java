@@ -19,6 +19,8 @@ public record EssaySubmitRequest(
     Long configId,
 
     @Size(max = 160, message = "idempotencyKey 不能超过160个字符")
-    String idempotencyKey
+    String idempotencyKey,
+
+    Long parentEssayId
 ) {
 }

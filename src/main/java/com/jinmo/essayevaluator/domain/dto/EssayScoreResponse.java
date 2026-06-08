@@ -11,6 +11,7 @@ public record EssayScoreResponse(
     String aiModel,
     Integer tokensUsed,
     Integer processingTime,
+    AiUsageSummary aiUsage,
     String rubricType,
     String rubricVersion,
     Double nativeScore,
@@ -22,6 +23,8 @@ public record EssayScoreResponse(
     String contentHash,
     String errorCode,
     String errorMessage,
+    Integer attemptCount,
+    Boolean retryable,
     LocalDateTime createdAt
 ) {
 }

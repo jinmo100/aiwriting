@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jinmo.essayevaluator.ai.AIService;
+import com.jinmo.essayevaluator.ai.provider.AIProviderErrorCode;
+import com.jinmo.essayevaluator.ai.provider.AIProviderException;
 import com.jinmo.essayevaluator.common.exception.BusinessException;
+import com.jinmo.essayevaluator.domain.dto.AiUsageSummary;
 import com.jinmo.essayevaluator.domain.dto.EssayHistoryItem;
 import com.jinmo.essayevaluator.domain.dto.EssayResponse;
 import com.jinmo.essayevaluator.domain.dto.EssayScoreResponse;
@@ -37,6 +40,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -54,6 +58,8 @@ public class EssayService {
     private final EssayScoreMapper essayScoreMapper;
     private final ApiConfigMapper apiConfigMapper;
     private final RubricService rubricService;
+    private final CurrentUserService currentUserService;
+    private final AiInvocationLogService aiInvocationLogService;
     private final EssayInputAnalyzer essayInputAnalyzer;
     private final ScoringIdempotencyService idempotencyService;
     private final AIService aiService;
@@ -66,6 +72,7 @@ public class EssayService {
      */
     @Transactional
     public EssayScoreResponse submitAndScore(EssaySubmitRequest request) {
+        Long userId = currentUserService.requireUserId();
         EssayType essayType = EssayType.fromCode(request.essayType());
         int wordCount = countWords(request.content());
         int charCount = countChars(request.content());
@@ -74,26 +81,32 @@ public class EssayService {
 
         String idempotencyKey = normalizeNullable(request.idempotencyKey());
         String contentHash = ScoringIdempotencyService.contentHash(essayType.name(), request.taskPrompt(), request.content());
+        EssayVersionContext versionContext = resolveVersionContext(userId, request.parentEssayId());
+        String cacheContentHash = versionContext.parentEssayId() == null ? contentHash : null;
 
-        Optional<Long> cachedEssayId = idempotencyService.findCachedEssayId(idempotencyKey, contentHash);
+        Optional<Long> cachedEssayId = idempotencyService.findCachedEssayId(userId, idempotencyKey, cacheContentHash);
         if (cachedEssayId.isPresent()) {
             log.info("命中 Redis 幂等缓存: essayId={}", cachedEssayId.get());
             return getEssayScoreResponse(cachedEssayId.get());
         }
 
-        EssayScoreResponse existing = findExistingSubmission(idempotencyKey, contentHash);
+        EssayScoreResponse existing = findExistingSubmission(userId, idempotencyKey, cacheContentHash);
         if (existing != null) {
-            cacheExistingSubmission(existing);
+            cacheExistingSubmission(userId, existing, cacheContentHash);
             return existing;
         }
 
         log.info("提交作文，类型: {}, 英文词数: {}, 字符数: {}, contentHash={}", essayType, wordCount, charCount, contentHash);
 
-        ApiConfig config = resolveConfig(request.configId());
+        ApiConfig config = resolveConfig(userId, request.configId());
         RubricDefinition rubric = rubricService.getActiveRubric(essayType);
 
         Essay essay = new Essay();
+        essay.setUserId(userId);
         essay.setEssayType(essayType.name());
+        essay.setEssayGroupId(versionContext.essayGroupId());
+        essay.setVersionNo(versionContext.versionNo());
+        essay.setParentEssayId(versionContext.parentEssayId());
         essay.setTaskPrompt(normalizeNullable(request.taskPrompt()));
         essay.setContent(request.content());
         essay.setWordCount(wordCount);
@@ -105,9 +118,13 @@ public class EssayService {
 
         try {
             essayMapper.insert(essay);
+            if (essay.getEssayGroupId() == null) {
+                essay.setEssayGroupId(essay.getId());
+                essayMapper.updateById(essay);
+            }
         } catch (DuplicateKeyException e) {
             log.info("DB 幂等唯一索引命中: idempotencyKey={}", idempotencyKey);
-            EssayScoreResponse duplicate = findExistingSubmission(idempotencyKey, contentHash);
+            EssayScoreResponse duplicate = findExistingSubmission(userId, idempotencyKey, cacheContentHash);
             if (duplicate != null) {
                 return duplicate;
             }
@@ -121,18 +138,21 @@ public class EssayService {
         score.setRubricType(rubric.profile().getTypeCode());
         score.setRubricVersion(rubric.version().getVersion());
         score.setAiModel(config.getModelName());
+        score.setAttemptCount(1);
         essayScoreMapper.insert(score);
 
-        idempotencyService.cacheScoring(idempotencyKey, contentHash, essay.getId());
+        idempotencyService.cacheScoring(userId, idempotencyKey, cacheContentHash, essay.getId());
         scheduleScoringAfterCommit(essay.getId(), score.getId());
 
         return buildScoreResponse(essay, score, null);
     }
 
     public Page<EssayHistoryItem> getHistory(int page, int size) {
+        Long userId = currentUserService.requireUserId();
         Page<Essay> essayPage = essayMapper.selectPage(
             new Page<>(page, size),
             new LambdaQueryWrapper<Essay>()
+                .eq(Essay::getUserId, userId)
                 .orderByDesc(Essay::getCreatedAt)
         );
 
@@ -144,7 +164,13 @@ public class EssayService {
     }
 
     public Essay getEssay(Long id) {
-        Essay essay = essayMapper.selectById(id);
+        Long userId = currentUserService.requireUserId();
+        Essay essay = essayMapper.selectOne(
+            new LambdaQueryWrapper<Essay>()
+                .eq(Essay::getId, id)
+                .eq(Essay::getUserId, userId)
+                .last("LIMIT 1")
+        );
         if (essay == null) {
             throw new BusinessException("作文不存在");
         }
@@ -172,10 +198,13 @@ public class EssayService {
                 null,
                 null,
                 null,
+                null,
                 essay.getIdempotencyKey(),
                 essay.getContentHash(),
                 null,
                 null,
+                null,
+                false,
                 null
             );
         }
@@ -208,9 +237,20 @@ public class EssayService {
         return content == null ? 0 : content.codePointCount(0, content.length());
     }
 
-    private ApiConfig resolveConfig(Long configId) {
+    private ApiConfig resolveConfig(Long userId, Long configId) {
         if (configId != null) {
-            ApiConfig config = apiConfigMapper.selectById(configId);
+            ApiConfig config = apiConfigMapper.selectOne(
+                new LambdaQueryWrapper<ApiConfig>()
+                    .eq(ApiConfig::getId, configId)
+                    .and(wrapper -> wrapper
+                        .eq(ApiConfig::getOwnerUserId, userId)
+                        .eq(ApiConfig::getVisibility, "PRIVATE")
+                        .or()
+                        .eq(ApiConfig::getVisibility, "PUBLIC")
+                        .eq(ApiConfig::getAllowPublicUse, true)
+                    )
+                    .last("LIMIT 1")
+            );
             if (config == null) {
                 throw new BusinessException("指定的配置不存在");
             }
@@ -219,6 +259,8 @@ public class EssayService {
 
         ApiConfig config = apiConfigMapper.selectOne(
             new LambdaQueryWrapper<ApiConfig>()
+                .eq(ApiConfig::getOwnerUserId, userId)
+                .eq(ApiConfig::getVisibility, "PRIVATE")
                 .eq(ApiConfig::getIsDefault, true)
                 .last("LIMIT 1")
         );
@@ -228,11 +270,39 @@ public class EssayService {
         return config;
     }
 
-    private EssayScoreResponse findExistingSubmission(String idempotencyKey, String contentHash) {
+    private EssayVersionContext resolveVersionContext(Long userId, Long parentEssayId) {
+        if (parentEssayId == null) {
+            return new EssayVersionContext(null, 1, null);
+        }
+        Essay parent = essayMapper.selectOne(
+            new LambdaQueryWrapper<Essay>()
+                .eq(Essay::getId, parentEssayId)
+                .eq(Essay::getUserId, userId)
+                .last("LIMIT 1")
+        );
+        if (parent == null) {
+            throw new BusinessException("原作文不存在，无法创建修改版");
+        }
+        Long groupId = parent.getEssayGroupId() == null ? parent.getId() : parent.getEssayGroupId();
+        Essay latest = essayMapper.selectOne(
+            new LambdaQueryWrapper<Essay>()
+                .eq(Essay::getUserId, userId)
+                .eq(Essay::getEssayGroupId, groupId)
+                .orderByDesc(Essay::getVersionNo)
+                .last("LIMIT 1")
+        );
+        int latestVersion = latest != null && latest.getVersionNo() != null
+            ? latest.getVersionNo()
+            : (parent.getVersionNo() == null ? 1 : parent.getVersionNo());
+        return new EssayVersionContext(groupId, latestVersion + 1, parent.getId());
+    }
+
+    private EssayScoreResponse findExistingSubmission(Long userId, String idempotencyKey, String contentHash) {
         Essay byKey = null;
         if (StringUtils.hasText(idempotencyKey)) {
             byKey = essayMapper.selectOne(
                 new LambdaQueryWrapper<Essay>()
+                    .eq(Essay::getUserId, userId)
                     .eq(Essay::getIdempotencyKey, idempotencyKey)
                     .last("LIMIT 1")
             );
@@ -246,6 +316,7 @@ public class EssayService {
         }
         Essay recentSameContent = essayMapper.selectOne(
             new LambdaQueryWrapper<Essay>()
+                .eq(Essay::getUserId, userId)
                 .eq(Essay::getContentHash, contentHash)
                 .ge(Essay::getCreatedAt, LocalDateTime.now().minusMinutes(RECENT_CONTENT_DUPLICATE_MINUTES))
                 .orderByDesc(Essay::getCreatedAt)
@@ -265,17 +336,17 @@ public class EssayService {
         );
     }
 
-    private void cacheExistingSubmission(EssayScoreResponse response) {
+    private void cacheExistingSubmission(Long userId, EssayScoreResponse response, String cacheContentHash) {
         if (response == null) {
             return;
         }
         String status = response.scoringStatus();
         if ("COMPLETED".equals(status)) {
-            idempotencyService.cacheCompleted(response.idempotencyKey(), response.contentHash(), response.essayId());
+            idempotencyService.cacheCompleted(userId, response.idempotencyKey(), cacheContentHash, response.essayId());
         } else if ("FAILED".equals(status)) {
-            idempotencyService.cacheFailed(response.idempotencyKey(), response.contentHash(), response.essayId());
+            idempotencyService.cacheFailed(userId, response.idempotencyKey(), cacheContentHash, response.essayId());
         } else {
-            idempotencyService.cacheScoring(response.idempotencyKey(), response.contentHash(), response.essayId());
+            idempotencyService.cacheScoring(userId, response.idempotencyKey(), cacheContentHash, response.essayId());
         }
     }
 
@@ -290,6 +361,9 @@ public class EssayService {
             EssayResponse.summarize(essay.getTaskPrompt()),
             EssayResponse.summarize(essay.getContent()),
             essay.getWordCount(),
+            essay.getEssayGroupId(),
+            essay.getVersionNo(),
+            essay.getParentEssayId(),
             score == null ? null : score.getNativeScoreDisplay(),
             score == null ? null : score.getNormalizedScore(),
             score == null ? null : score.getGradeLabel(),
@@ -301,6 +375,7 @@ public class EssayService {
     }
 
     private EssayScoreResponse buildScoreResponse(Essay essay, EssayScore score, RubricScoringResult result) {
+        AiUsageSummary aiUsage = aiInvocationLogService.summarize(essay.getUserId(), essay.getId(), score.getId());
         return new EssayScoreResponse(
             essay.getId(),
             score.getId(),
@@ -310,6 +385,7 @@ public class EssayService {
             score.getAiModel(),
             score.getTokensUsed(),
             score.getProcessingTime(),
+            aiUsage,
             score.getRubricType(),
             score.getRubricVersion(),
             score.getNativeScore(),
@@ -321,8 +397,40 @@ public class EssayService {
             essay.getContentHash(),
             score.getErrorCode(),
             score.getErrorMessage(),
+            score.getAttemptCount(),
+            isRetryableFailure(score.getErrorCode()) && "FAILED".equals(score.getScoringStatus())
+                && (score.getAttemptCount() == null || score.getAttemptCount() < 3),
             score.getCreatedAt()
         );
+    }
+
+    @Transactional
+    public EssayScoreResponse retryScoring(Long essayId) {
+        Essay essay = getEssay(essayId);
+        EssayScore score = getScore(essayId);
+        if (score == null) {
+            throw new BusinessException("评分记录不存在");
+        }
+        if (!"FAILED".equals(score.getScoringStatus())) {
+            throw new BusinessException("只有失败的评分任务可以重试");
+        }
+        int attemptCount = score.getAttemptCount() == null ? 1 : score.getAttemptCount();
+        if (attemptCount >= 3) {
+            throw new BusinessException("评分重试次数已达上限");
+        }
+        if (!isRetryableFailure(score.getErrorCode())) {
+            throw new BusinessException("当前失败类型不可重试，请调整后重新提交");
+        }
+
+        score.setScoringStatus("SCORING");
+        score.setAttemptCount(attemptCount + 1);
+        score.setErrorCode(null);
+        score.setErrorMessage(null);
+        score.setFailureDetailJson(null);
+        essayScoreMapper.updateById(score);
+        idempotencyService.cacheScoring(essay.getUserId(), essay.getIdempotencyKey(), cacheableContentHash(essay), essay.getId());
+        scheduleScoringAfterCommit(essay.getId(), score.getId());
+        return buildScoreResponse(essay, score, null);
     }
 
     private void scheduleScoringAfterCommit(Long essayId, Long scoreId) {
@@ -376,6 +484,14 @@ public class EssayService {
             );
             long duration = System.currentTimeMillis() - startTime;
             RubricScoringResult result = applyInspection(outcome.result(), inspection);
+            aiInvocationLogService.recordScoringInvocations(
+                essay.getUserId(),
+                essay.getId(),
+                score.getId(),
+                config,
+                score.getAttemptCount() == null ? 1 : score.getAttemptCount(),
+                outcome.invocations()
+            );
 
             score.setScoringStatus("COMPLETED");
             score.setRubricType(result.rubric().type());
@@ -391,18 +507,26 @@ public class EssayService {
             score.setProcessingTime((int) duration);
             score.setErrorCode(null);
             score.setErrorMessage(null);
+            score.setFailureDetailJson(null);
             essayScoreMapper.updateById(score);
 
-            idempotencyService.cacheCompleted(essay.getIdempotencyKey(), essay.getContentHash(), essay.getId());
+            idempotencyService.cacheCompleted(essay.getUserId(), essay.getIdempotencyKey(), cacheableContentHash(essay), essay.getId());
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             log.error("异步评分失败: essayId={}, scoreId={}", essayId, scoreId, e);
+            ScoringFailure failure = classifyFailure(e);
             score.setScoringStatus("FAILED");
             score.setProcessingTime((int) duration);
-            score.setErrorCode("SCORING_FAILED");
-            score.setErrorMessage(e.getMessage());
+            score.setErrorCode(failure.code());
+            score.setErrorMessage(failure.userMessage());
+            score.setFailureDetailJson(writeJson(Map.of(
+                "code", failure.code(),
+                "stage", failure.stage(),
+                "retryable", failure.retryable(),
+                "technicalMessage", truncate(e.getMessage(), 500)
+            )));
             essayScoreMapper.updateById(score);
-            idempotencyService.cacheFailed(essay.getIdempotencyKey(), essay.getContentHash(), essay.getId());
+            idempotencyService.cacheFailed(essay.getUserId(), essay.getIdempotencyKey(), cacheableContentHash(essay), essay.getId());
         }
     }
 
@@ -421,7 +545,8 @@ public class EssayService {
             result.annotations(),
             result.summary(),
             safetyNotice,
-            inspection.inputAnalysis()
+            inspection.inputAnalysis(),
+            result.referenceEssay()
         );
     }
 
@@ -449,6 +574,73 @@ public class EssayService {
         if (AnalysisStatus.REJECT.name().equals(inspection.inputAnalysis().status())) {
             throw new BusinessException("作文输入不符合要求: " + String.join("；", inspection.inputAnalysis().rejections()));
         }
+    }
+
+    private ScoringFailure classifyFailure(Exception e) {
+        AIProviderException providerException = findCause(e, AIProviderException.class);
+        if (providerException != null) {
+            AIProviderErrorCode code = providerException.getErrorCode();
+            return switch (code) {
+                case AUTH_ERROR, MODEL_NOT_FOUND, INVALID_BASE_URL, INVALID_PROVIDER_CONFIG ->
+                    new ScoringFailure("CONFIG_ERROR", "AI 配置不可用，请检查模型配置。", "PROVIDER_CALL", false);
+                case RATE_LIMIT ->
+                    new ScoringFailure("PROVIDER_RATE_LIMITED", "当前 Provider 请求较多，请稍后重试。", "PROVIDER_CALL", true);
+                case NETWORK_TIMEOUT ->
+                    new ScoringFailure("PROVIDER_TIMEOUT", "AI 分析时间过长，请稍后重试。", "PROVIDER_CALL", true);
+                case CONTENT_POLICY_BLOCKED ->
+                    new ScoringFailure("PROVIDER_REJECTED", "作文内容未能通过模型安全策略，请调整后重试。", "PROVIDER_CALL", false);
+                case STRUCTURED_OUTPUT_FAILED ->
+                    new ScoringFailure("INVALID_AI_RESPONSE", "AI 返回格式异常，请稍后重试。", "AI_RESPONSE_VALIDATE", true);
+                case NETWORK_ERROR, PROVIDER_5XX, UNKNOWN_ERROR ->
+                    new ScoringFailure("PROVIDER_ERROR", "AI Provider 暂时不可用，请稍后重试。", "PROVIDER_CALL", true);
+            };
+        }
+
+        String message = e.getMessage() == null ? "" : e.getMessage();
+        if (message.contains("作文输入不符合要求")) {
+            return new ScoringFailure("CONTENT_REJECTED", "作文内容不符合提交要求，请修改后重新提交。", "SUBMIT_VALIDATION", false);
+        }
+        if (message.contains("解析评分结果失败") || message.contains("读取评分结果失败")) {
+            return new ScoringFailure("INVALID_AI_RESPONSE", "AI 返回格式异常，请稍后重试。", "AI_RESPONSE_PARSE", true);
+        }
+        if (message.contains("评分配置不存在")) {
+            return new ScoringFailure("CONFIG_ERROR", "AI 配置不可用，请检查模型配置。", "RUBRIC_LOAD", false);
+        }
+        return new ScoringFailure("SCORING_FAILED", "评分失败，请稍后重试。", "UNKNOWN", true);
+    }
+
+    private static boolean isRetryableFailure(String errorCode) {
+        return errorCode == null
+            || "PROVIDER_TIMEOUT".equals(errorCode)
+            || "PROVIDER_RATE_LIMITED".equals(errorCode)
+            || "PROVIDER_ERROR".equals(errorCode)
+            || "INVALID_AI_RESPONSE".equals(errorCode)
+            || "SCORING_FAILED".equals(errorCode);
+    }
+
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return type.cast(current);
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private static String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
+    private static String cacheableContentHash(Essay essay) {
+        if (essay == null || essay.getParentEssayId() != null) {
+            return null;
+        }
+        return essay.getContentHash();
     }
 
     private RubricScoringResult readResult(String resultJson) {
@@ -484,5 +676,11 @@ public class EssayService {
             return null;
         }
         return value.trim();
+    }
+
+    private record ScoringFailure(String code, String userMessage, String stage, boolean retryable) {
+    }
+
+    private record EssayVersionContext(Long essayGroupId, Integer versionNo, Long parentEssayId) {
     }
 }
