@@ -1,15 +1,78 @@
 param(
-    [int]$PostgresLocalPort = $(if ($env:DEV_TUNNEL_POSTGRES_LOCAL_PORT) { [int]$env:DEV_TUNNEL_POSTGRES_LOCAL_PORT } else { 5432 }),
-    [int]$RedisLocalPort = $(if ($env:DEV_TUNNEL_REDIS_LOCAL_PORT) { [int]$env:DEV_TUNNEL_REDIS_LOCAL_PORT } else { 6379 }),
-    [string]$TunnelHost = $env:DEV_TUNNEL_HOST,
-    [string]$TunnelUser = $env:DEV_TUNNEL_USER,
-    [string]$IdentityFile = $env:DEV_TUNNEL_IDENTITY_FILE,
-    [int]$PostgresRemotePort = $(if ($env:DEV_TUNNEL_POSTGRES_REMOTE_PORT) { [int]$env:DEV_TUNNEL_POSTGRES_REMOTE_PORT } else { 5432 }),
-    [int]$RedisRemotePort = $(if ($env:DEV_TUNNEL_REDIS_REMOTE_PORT) { [int]$env:DEV_TUNNEL_REDIS_REMOTE_PORT } else { 6379 }),
-    [string]$RemoteHost = $(if ($env:DEV_TUNNEL_REMOTE_HOST) { $env:DEV_TUNNEL_REMOTE_HOST } else { "127.0.0.1" })
+    [string]$EnvFile = ".env.dev.local",
+    [int]$PostgresLocalPort = 0,
+    [int]$RedisLocalPort = 0,
+    [string]$TunnelHost,
+    [string]$TunnelUser,
+    [string]$IdentityFile,
+    [int]$PostgresRemotePort = 0,
+    [int]$RedisRemotePort = 0,
+    [string]$RemoteHost
 )
 
 $ErrorActionPreference = "Stop"
+
+function Load-EnvFile {
+    param([string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+
+    Get-Content $Path | ForEach-Object {
+        $line = $_.Trim()
+        if (-not $line -or $line.StartsWith("#")) {
+            return
+        }
+
+        $idx = $line.IndexOf("=")
+        if ($idx -le 0) {
+            return
+        }
+
+        $name = $line.Substring(0, $idx).Trim()
+        $value = $line.Substring($idx + 1).Trim()
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+
+        [Environment]::SetEnvironmentVariable($name, $value, "Process")
+    }
+}
+
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$envPath = if ([System.IO.Path]::IsPathRooted($EnvFile)) {
+    $EnvFile
+} else {
+    Join-Path $repoRoot $EnvFile
+}
+
+Load-EnvFile -Path $envPath
+
+if ($PostgresLocalPort -le 0) {
+    $PostgresLocalPort = if ($env:DEV_TUNNEL_POSTGRES_LOCAL_PORT) { [int]$env:DEV_TUNNEL_POSTGRES_LOCAL_PORT } else { 5432 }
+}
+if ($RedisLocalPort -le 0) {
+    $RedisLocalPort = if ($env:DEV_TUNNEL_REDIS_LOCAL_PORT) { [int]$env:DEV_TUNNEL_REDIS_LOCAL_PORT } else { 6379 }
+}
+if ([string]::IsNullOrWhiteSpace($TunnelHost)) {
+    $TunnelHost = $env:DEV_TUNNEL_HOST
+}
+if ([string]::IsNullOrWhiteSpace($TunnelUser)) {
+    $TunnelUser = $env:DEV_TUNNEL_USER
+}
+if ([string]::IsNullOrWhiteSpace($IdentityFile)) {
+    $IdentityFile = $env:DEV_TUNNEL_IDENTITY_FILE
+}
+if ($PostgresRemotePort -le 0) {
+    $PostgresRemotePort = if ($env:DEV_TUNNEL_POSTGRES_REMOTE_PORT) { [int]$env:DEV_TUNNEL_POSTGRES_REMOTE_PORT } else { 5432 }
+}
+if ($RedisRemotePort -le 0) {
+    $RedisRemotePort = if ($env:DEV_TUNNEL_REDIS_REMOTE_PORT) { [int]$env:DEV_TUNNEL_REDIS_REMOTE_PORT } else { 6379 }
+}
+if ([string]::IsNullOrWhiteSpace($RemoteHost)) {
+    $RemoteHost = if ($env:DEV_TUNNEL_REMOTE_HOST) { $env:DEV_TUNNEL_REMOTE_HOST } else { "127.0.0.1" }
+}
 
 if ([string]::IsNullOrWhiteSpace($TunnelHost) -or [string]::IsNullOrWhiteSpace($TunnelUser)) {
     throw @"
