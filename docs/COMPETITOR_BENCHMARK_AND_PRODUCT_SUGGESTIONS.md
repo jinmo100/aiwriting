@@ -679,6 +679,7 @@ error_code
 - 套餐与调用额度。
 - 成本统计。
 - 多租户隔离。
+- 发布构建最终产品：GHCR 预构建镜像、release compose、部署文档。
 - 部署和监控。
 
 ## 8. 下一阶段最值得优先做的 10 个改动
@@ -779,6 +780,18 @@ error_code
 - token 统计优先使用 Provider 返回的精确 usage；失败、流式、中转或兼容接口缺失 usage 时才估算。
 - 费用展示可选，取决于用户是否在配置中填写单价；不硬编码官方价格。
 - 明细日志对开发排查有用，用户侧只展示安全化明细，不展示原始 prompt、原始 response、原始错误全文和 API Key。
+
+### 8.4 发布构建最终产品已决边界
+
+2026-06-08 追加结论：项目需要让普通部署者拿到“最终产品”，而不是在 VPS 上手工跑 `npm install`、`npm run build`、Gradle 或本地 JDK。
+
+- 发布产物：`ghcr.io/jinmo100/essay-evaluator-backend` 与 `ghcr.io/jinmo100/essay-evaluator-frontend`。
+- 发布入口：`docker-compose.release.yml` + `.env.release.example` + `docs/DEPLOYMENT.md`。
+- `main` push 发布 `edge` 与 `main-<sha>`；`v*` tag 发布 `latest` 与固定版本 tag。
+- 发布门禁：后端测试、评分 benchmark、前端 `npm ci` + build 通过后才构建并推送镜像。
+- 默认 compose 内置 PostgreSQL 和 Redis，保证一条 compose 命令能启动；数据库和 Redis 不对宿主机暴露端口。
+- 已有数据库/Redis 的用户可以自行修改 compose 或覆盖连接变量，但文档必须明确项目运行离不开 PostgreSQL 与 Redis。
+- HTTPS、域名和反向代理是部署者自选方案；文档只给通用约束和 Cookie Secure 设置原则。
 
 ## 9. 参考来源
 

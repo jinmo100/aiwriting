@@ -20,6 +20,7 @@
 - 学习反馈：评分结果结构已支持 `annotations[].quote` 和 `referenceEssay`；结果页可对可定位片段高亮，并展示同水平提升版范文。
 - 修改闭环：已支持 `parentEssayId` 提交修改版，作文保存 `essayGroupId` / `versionNo` / `parentEssayId` 版本链。
 - 学习看板：已新增 `/api/dashboard/summary` 和前端 `/dashboard`，展示个人提交、分数、近期活跃和类型分布。
+- 发布产物：已新增 GHCR 预构建镜像发布链路、`docker-compose.release.yml`、`.env.release.example` 和 `docs/DEPLOYMENT.md`，VPS 部署不再要求手工运行 npm/Gradle 构建。
 
 ## 已实现能力
 
@@ -154,6 +155,18 @@ EssayController
 - 前端 `/dashboard` 页面和导航入口。
 - 后续补齐：高频错误、薄弱 Rubric 维度、分数趋势图、最近提升点。
 
+### 发布部署产物
+
+已新增：
+
+- `Dockerfile.backend` 多阶段自构建：镜像内执行 `./gradlew bootJar --no-daemon`，运行时使用 Java 21 JRE 和 `-XX:MaxRAMPercentage=75.0`。
+- `Dockerfile.frontend` 使用 `npm ci` 做可复现构建。
+- `.dockerignore` / `frontend/.dockerignore`：避免把本地 env、node_modules、dist、build 产物和前端目录塞进后端构建上下文。
+- `docker-compose.release.yml`：默认拉取 `ghcr.io/jinmo100/essay-evaluator-backend:${APP_VERSION:-latest}` 和 `ghcr.io/jinmo100/essay-evaluator-frontend:${APP_VERSION:-latest}`。
+- 发布版 compose 默认内置 PostgreSQL 16 与 Redis 7，但不把 5432/6379 暴露到宿主机。
+- `.github/workflows/publish-images.yml`：main 发布 `edge` / `main-<sha>`，`v*` tag 发布 `latest` / 固定版本；先跑后端测试、评分 benchmark、前端构建，再构建并推送多架构镜像。
+- `.env.release.example` 与 `docs/DEPLOYMENT.md`：说明 PostgreSQL/Redis 必需、HTTPS Cookie Secure 设置、反向代理绑定方式和 GHCR tag 语义。
+
 ### 异步评分与幂等
 
 已实现：
@@ -233,6 +246,7 @@ Redis:      redis://localhost:6379/0
 
 ```powershell
 .\gradlew.bat test
+.\gradlew.bat test --tests com.jinmo.essayevaluator.release.ReleasePackagingTest
 .\gradlew.bat scoringBenchmarkReport
 cd frontend
 npm run build
@@ -241,6 +255,7 @@ npm run build
 当前结果：
 
 - 后端测试通过。
+- 发布包装契约测试通过。
 - 评分一致性基准报告生成通过。
 - 前端构建通过。
 - 后端当前代码可启动。

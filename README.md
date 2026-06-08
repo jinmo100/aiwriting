@@ -12,6 +12,26 @@
 - 用户系统：账号密码注册/登录，Redis Session + HttpOnly Cookie；作文、历史和 API 配置按用户隔离。
 - 失败治理：AI 调用失败会分类保存，结果页显示中文友好失败原因、尝试次数，并支持可重试失败直接重试。
 
+## 发布部署（推荐给 VPS / 生产）
+
+项目现在提供 GHCR 预构建镜像作为最终发布产物，部署主机不需要安装 Node.js、npm、Gradle 或 JDK：
+
+- 后端镜像：`ghcr.io/jinmo100/essay-evaluator-backend`
+- 前端镜像：`ghcr.io/jinmo100/essay-evaluator-frontend`
+- 一键启动入口：`docker-compose.release.yml`
+- 环境变量模板：`.env.release.example`
+- 完整部署说明：`docs/DEPLOYMENT.md`
+
+最短路径：
+
+```bash
+cp .env.release.example .env
+docker compose -f docker-compose.release.yml --env-file .env pull
+docker compose -f docker-compose.release.yml --env-file .env up -d
+```
+
+发布版 compose 默认包含 PostgreSQL 和 Redis，且不把数据库/Redis 端口暴露到宿主机；已有 PostgreSQL/Redis 的用户可以按 `docs/DEPLOYMENT.md` 修改 compose 或覆盖连接变量。域名、HTTPS 和反向代理方案由部署者自选，常见做法是设置 `FRONTEND_BIND=127.0.0.1` 后由宿主机反向代理转发。
+
 ## 核心功能
 
 - 多 Provider 协议适配：`OPENAI_CHAT_COMPLETIONS`、`OPENAI_RESPONSES`、`ANTHROPIC_MESSAGES`、`GEMINI_GENERATE_CONTENT`。
@@ -200,12 +220,13 @@ V9__essay_versioning.sql
 
 ```powershell
 .\gradlew.bat test
+.\gradlew.bat test --tests com.jinmo.essayevaluator.release.ReleasePackagingTest
 .\gradlew.bat scoringBenchmarkReport
 cd frontend
 npm run build
 ```
 
-当前已验证：后端测试通过；评分基准软门禁报告可生成；前端构建通过；v2.3 运行 smoke test 通过。
+当前已验证：后端测试通过；发布包装契约测试通过；评分基准软门禁报告可生成；前端构建通过；v2.3 运行 smoke test 通过。
 本地运行验证：后端当前代码可启动；异步提交流程返回 `SCORING`，重复 `idempotencyKey` 返回同一 `essayId`，同内容 `contentHash` 可复用已完成结果；修改版提交流程只用 `idempotencyKey` 防重复点击，不用 `contentHash` 误命中旧版本；缺少必填 `taskPrompt` 和疑似 prompt injection 输入会在调用 AI 前返回 400。当前迁移已到 `V9`。
 
 ### 2026-06-08 v2.3 运行验收快照
