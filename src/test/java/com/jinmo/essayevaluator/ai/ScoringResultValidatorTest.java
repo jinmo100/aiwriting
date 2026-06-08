@@ -42,6 +42,7 @@ class ScoringResultValidatorTest {
             List.of(),
             new RubricScoringResult.Summary(List.of("a", "b"), List.of("c", "d"), "feedback"),
             "",
+            null,
             null
         );
 
@@ -72,6 +73,7 @@ class ScoringResultValidatorTest {
             List.of(),
             new RubricScoringResult.Summary(List.of(), List.of(), ""),
             "",
+            null,
             null
         );
 
@@ -84,6 +86,34 @@ class ScoringResultValidatorTest {
     void acceptsConfidenceDefaults() {
         assertThatCode(() -> validator.validateAndNormalize(generalResult(27, 22, 23, 16), RubricTestFixtures.generalRubric()))
             .doesNotThrowAnyException();
+    }
+
+    @Test
+    void preservesReferenceEssayForResultPageDisplay() {
+        RubricScoringResult result = generalResult(25, 20, 21, 16);
+        result = new RubricScoringResult(
+            result.nativeScore(),
+            result.normalizedScore(),
+            result.rubric(),
+            result.gradeLabel(),
+            result.confidence(),
+            result.dimensions(),
+            result.annotations(),
+            result.summary(),
+            result.safetyNotice(),
+            result.inputAnalysis(),
+            new RubricScoringResult.ReferenceEssay(
+                "同水平提升版",
+                "This version keeps the student's ideas but improves coherence and accuracy.",
+                List.of("保留原意", "提升连接")
+            )
+        );
+
+        RubricScoringResult normalized = validator.validateAndNormalize(result, RubricTestFixtures.generalRubric());
+
+        assertThat(normalized.referenceEssay()).isNotNull();
+        assertThat(normalized.referenceEssay().content()).contains("improves coherence");
+        assertThat(normalized.referenceEssay().notes()).contains("保留原意");
     }
 
     private static RubricScoringResult generalResult(double content, double organization, double language, double expression) {
@@ -102,6 +132,7 @@ class ScoringResultValidatorTest {
             List.of(),
             new RubricScoringResult.Summary(List.of("clear argument"), List.of("add examples"), "Good work."),
             "",
+            null,
             null
         );
     }

@@ -18,7 +18,8 @@ public record RubricScoringResult(
     List<Annotation> annotations,
     Summary summary,
     String safetyNotice,
-    InputAnalysis inputAnalysis
+    InputAnalysis inputAnalysis,
+    ReferenceEssay referenceEssay
 ) {
     public RubricScoringResult {
         dimensions = dimensions == null ? List.of() : List.copyOf(dimensions);
@@ -79,12 +80,24 @@ public record RubricScoringResult(
     public record Annotation(
         String type,
         String severity,
+        String quote,
         String original,
         String context,
         String message,
         String suggestion,
         String explanation
     ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ReferenceEssay(
+        String title,
+        String content,
+        List<String> notes
+    ) {
+        public ReferenceEssay {
+            notes = notes == null ? List.of() : List.copyOf(notes);
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Summary(

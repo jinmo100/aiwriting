@@ -92,7 +92,8 @@ public class ScoringResultValidator {
             result.annotations(),
             summary,
             result.safetyNotice(),
-            result.inputAnalysis()
+            result.inputAnalysis(),
+            normalizeReferenceEssay(result.referenceEssay())
         );
     }
 
@@ -173,6 +174,17 @@ public class ScoringResultValidator {
             summary.strengths(),
             summary.priorityImprovements(),
             defaultString(summary.overallFeedback())
+        );
+    }
+
+    private RubricScoringResult.ReferenceEssay normalizeReferenceEssay(RubricScoringResult.ReferenceEssay referenceEssay) {
+        if (referenceEssay == null || referenceEssay.content() == null || referenceEssay.content().isBlank()) {
+            return null;
+        }
+        return new RubricScoringResult.ReferenceEssay(
+            defaultString(referenceEssay.title()),
+            referenceEssay.content().trim(),
+            referenceEssay.notes()
         );
     }
 
