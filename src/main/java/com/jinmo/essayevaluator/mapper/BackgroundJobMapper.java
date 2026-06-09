@@ -41,9 +41,11 @@ public interface BackgroundJobMapper extends BaseMapper<BackgroundJob> {
             started_at = COALESCE(started_at, #{now}),
             updated_at = #{now}
         WHERE id = #{id}
-          AND status = 'PENDING'
           AND run_after <= #{now}
-          AND (locked_until IS NULL OR locked_until <= #{now})
+          AND (
+              status = 'PENDING'
+              OR (status = 'RUNNING' AND locked_until <= #{now})
+          )
         """)
     int claim(
         @Param("id") Long id,

@@ -2,6 +2,7 @@ package com.jinmo.essayevaluator.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jinmo.essayevaluator.mapper.BackgroundJobMapper;
+import org.apache.ibatis.annotations.Update;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -107,6 +108,20 @@ class BackgroundJobServiceTest {
         ArgumentCaptor<LocalDateTime> lockCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(backgroundJobMapper).claim(eq(11L), eq("worker-1"), lockCaptor.capture(), eq(NOW));
         assertThat(lockCaptor.getValue()).isEqualTo(lockedUntil);
+    }
+
+    @Test
+    void claimSqlAllowsExpiredRunningJobRecovery() throws NoSuchMethodException {
+        Update update = BackgroundJobMapper.class
+            .getMethod("claim", Long.class, String.class, LocalDateTime.class, LocalDateTime.class)
+            .getAnnotation(Update.class);
+        String sql = String.join("\n", update.value());
+
+        // RUNNING 锁过期后必须允许重新领取，否则进程崩溃会让 active business key 永久卡死。
+        assertThat(sql)
+            .contains("status = 'PENDING'")
+            .contains("status = 'RUNNING'")
+            .contains("locked_until <= #{now}");
     }
 
     @Test
