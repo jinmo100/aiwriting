@@ -150,6 +150,12 @@ public class BackgroundJobService {
         return backgroundJobMapper.selectList(query);
     }
 
+    @Transactional(readOnly = true)
+    public BackgroundJob findLatestForOwner(BackgroundJobType jobType, Long ownerUserId) {
+        validateLatestQuery(jobType, ownerUserId);
+        return backgroundJobMapper.findLatestForOwnerAndType(jobType.value(), ownerUserId);
+    }
+
     private BackgroundJob terminalUpdate(Long id, BackgroundJobStatus status) {
         if (id == null) {
             throw new BusinessException("后台任务 ID 不能为空");
@@ -188,6 +194,15 @@ public class BackgroundJobService {
         }
         if (businessKey.length() > MAX_BUSINESS_KEY_LENGTH) {
             throw new BusinessException("后台任务业务键过长");
+        }
+    }
+
+    private void validateLatestQuery(BackgroundJobType type, Long ownerUserId) {
+        if (type == null) {
+            throw new BusinessException("后台任务类型不能为空");
+        }
+        if (ownerUserId == null) {
+            throw new BusinessException("后台任务归属用户不能为空");
         }
     }
 

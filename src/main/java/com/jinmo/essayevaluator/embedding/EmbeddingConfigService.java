@@ -124,9 +124,14 @@ public class EmbeddingConfigService {
     @Transactional(readOnly = true)
     public EmbeddingConfig getDefaultConfig() {
         Long userId = currentUserService.requireUserId();
+        return getDefaultConfigForUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public EmbeddingConfig getDefaultConfigForUser(Long ownerUserId) {
         return embeddingConfigMapper.selectOne(
             new LambdaQueryWrapper<EmbeddingConfig>()
-                .eq(EmbeddingConfig::getOwnerUserId, userId)
+                .eq(EmbeddingConfig::getOwnerUserId, ownerUserId)
                 .eq(EmbeddingConfig::getIsDefault, true)
                 .last("LIMIT 1")
         );
@@ -135,10 +140,15 @@ public class EmbeddingConfigService {
     @Transactional(readOnly = true)
     public EmbeddingConfig loadOwnedConfig(Long id) {
         Long userId = currentUserService.requireUserId();
+        return loadOwnedConfigForUser(userId, id);
+    }
+
+    @Transactional(readOnly = true)
+    public EmbeddingConfig loadOwnedConfigForUser(Long ownerUserId, Long id) {
         EmbeddingConfig config = embeddingConfigMapper.selectOne(
             new LambdaQueryWrapper<EmbeddingConfig>()
                 .eq(EmbeddingConfig::getId, id)
-                .eq(EmbeddingConfig::getOwnerUserId, userId)
+                .eq(EmbeddingConfig::getOwnerUserId, ownerUserId)
                 .last("LIMIT 1")
         );
         if (config == null) {

@@ -29,14 +29,14 @@
 
 ## 4. RAG 索引任务后端
 
-- [ ] 4.1 新增 `rag` 包下知识库、chunk embedding、索引状态 mapper/entity/dto
-- [ ] 4.2 实现 `RagIndexJobHandler`，通过 `RAG_INDEX` background job 执行索引
-- [ ] 4.3 实现批量读取 active chunks、调用 EmbeddingClient、写入 `rag_chunk_embeddings`
-- [ ] 4.4 在 `background_jobs.result_json` 中记录 totalChunks、processedChunks、failedChunks、embeddingVersion 和错误摘要
-- [ ] 4.5 实现用户索引状态查询和 `POST /api/rag/index/rebuild-my`
-- [ ] 4.6 新增 `CurrentUserService.requireAdmin()` 并保护 `/api/admin/rag/index/**`
-- [ ] 4.7 实现管理员索引状态查询和代用户触发索引，并记录 `requestedByUserId`
-- [ ] 4.8 补充 `RagIndexJobHandlerTest` 和用户 A/B 索引隔离测试
+- [x] 4.1 新增 `rag` 包下知识库、chunk embedding、索引状态 mapper/entity/dto
+- [x] 4.2 实现 `RagIndexJobHandler`，通过 `RAG_INDEX` background job 执行索引
+- [x] 4.3 实现批量读取 active chunks、调用 EmbeddingClient、写入 `rag_chunk_embeddings`
+- [x] 4.4 在 `background_jobs.result_json` 中记录 totalChunks、processedChunks、failedChunks、embeddingVersion 和错误摘要
+- [x] 4.5 实现用户索引状态查询和 `POST /api/rag/index/rebuild-my`
+- [x] 4.6 新增 `CurrentUserService.requireAdmin()` 并保护 `/api/admin/rag/index/**`
+- [x] 4.7 实现管理员索引状态查询和代用户触发索引，并记录 `requestedByUserId`
+- [x] 4.8 补充 `RagIndexJobHandlerTest` 和用户 A/B 索引隔离测试
 
 ## 5. RAG 检索与 Feedback 后端
 

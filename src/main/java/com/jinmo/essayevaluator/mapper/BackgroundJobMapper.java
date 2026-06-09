@@ -33,6 +33,19 @@ public interface BackgroundJobMapper extends BaseMapper<BackgroundJob> {
         @Param("businessKey") String businessKey
     );
 
+    @Select("""
+        SELECT *
+        FROM background_jobs
+        WHERE job_type = #{jobType}
+          AND owner_user_id = #{ownerUserId}
+        ORDER BY created_at DESC
+        LIMIT 1
+        """)
+    BackgroundJob findLatestForOwnerAndType(
+        @Param("jobType") String jobType,
+        @Param("ownerUserId") Long ownerUserId
+    );
+
     @Update("""
         UPDATE background_jobs
         SET status = 'RUNNING',
