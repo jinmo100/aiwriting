@@ -55,6 +55,49 @@ class RuntimeRegressionTest {
             .contains("不要用本地 stub");
     }
 
+    @Test
+    void ragMigrationHardensUserScopeAndBackgroundJobConstraints() throws IOException {
+        String migration = read("src/main/resources/db/migration/V11__rag_knowledge_base.sql");
+
+        assertThat(migration)
+            .contains("CONSTRAINT ck_background_jobs_status CHECK (status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'SKIPPED'))")
+            .contains("CONSTRAINT ck_background_jobs_attempt_count_non_negative CHECK (attempt_count >= 0)")
+            .contains("CONSTRAINT ck_background_jobs_max_attempts_non_negative CHECK (max_attempts >= 0)")
+            .contains("FOREIGN KEY (user_id, embedding_config_id)")
+            .contains("REFERENCES embedding_configs(owner_user_id, id)")
+            .contains("FOREIGN KEY (user_id, essay_id)")
+            .contains("REFERENCES essays(user_id, id)")
+            .contains("FOREIGN KEY (essay_id, score_id)")
+            .contains("REFERENCES essay_scores(essay_id, id)")
+            .contains("COMMENT ON COLUMN rag_feedbacks.api_config_id IS '生成反馈复用的 Chat Provider 配置 ID；公开/共享配置可能跨用户可用，归属和可用性由 service 层结合 visibility/allow_public_use 校验'");
+    }
+
+    @Test
+    void ragMigrationUsesIdempotentIndexesAndSeedUpsert() throws IOException {
+        String migration = read("src/main/resources/db/migration/V11__rag_knowledge_base.sql");
+
+        assertThat(migration)
+            .doesNotContainPattern("(?m)^CREATE (UNIQUE )?INDEX (?!IF NOT EXISTS)")
+            .contains("CREATE UNIQUE INDEX IF NOT EXISTS ux_rag_documents_skill_version")
+            .contains("ON CONFLICT (skill_tag, version) DO UPDATE SET")
+            .contains("ON CONFLICT (document_id, chunk_no) DO UPDATE SET")
+            .doesNotContain("embedding_vector)")
+            .doesNotContain("INSERT INTO rag_chunk_embeddings");
+    }
+
+    @Test
+    void deploymentDocsWarnAboutPgvectorVolumeUpgrade() throws IOException {
+        String deployment = read("docs/DEPLOYMENT.md");
+
+        assertThat(deployment)
+            .contains("从旧 release 内置 PostgreSQL 升级到 pgvector")
+            .contains("postgres:16-alpine")
+            .contains("pgvector/pgvector:pg16")
+            .contains("备份数据库")
+            .contains("pg_dump")
+            .contains("测试环境");
+    }
+
     private static String read(String relativePath) throws IOException {
         return Files.readString(ROOT.resolve(relativePath));
     }

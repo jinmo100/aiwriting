@@ -53,6 +53,16 @@ RAG 知识库会通过 Flyway 执行 `CREATE EXTENSION IF NOT EXISTS vector;`，
 - VPS/宿主机 PostgreSQL：如果你改为连接宿主机或云数据库，必须先由 PostgreSQL 超级用户或具备扩展创建权限的管理员安装并创建 `vector` 扩展，再启动应用执行迁移。
 - Windows 本机调试：如果 `.env.dev.local` 指向本机 PostgreSQL，也需要先安装匹配版本的 pgvector，并用管理员账号在目标库执行 `CREATE EXTENSION IF NOT EXISTS vector;`。
 
+### 从旧 release 内置 PostgreSQL 升级到 pgvector
+
+较早的 release compose 使用 `postgres:16-alpine`，当前 release compose 使用 `pgvector/pgvector:pg16`。两者同属 PostgreSQL 16，但直接复用既有 `postgres-data` volume 仍可能受到镜像基底、locale/collation 或已有数据目录状态影响。
+
+已有部署升级前请先：
+
+1. 备份数据库，至少保留一次可恢复的 `pg_dump` 或 volume 备份。
+2. 在测试环境或临时服务器上用同一份备份验证 `pgvector/pgvector:pg16` 能正常启动并完成 Flyway 迁移。
+3. 如果直接复用旧 volume 启动失败、collation/locale 警告无法确认，或需要更可控的升级路径，优先使用 `pg_dump` 导出旧库，再恢复到全新的 `pgvector/pgvector:pg16` 容器数据目录。
+
 示例（宿主机或自管数据库）：
 
 ```sql
@@ -128,6 +138,8 @@ docker compose -f docker-compose.release.yml --env-file .env up -d
 ```
 
 ## 更新与回滚
+
+如果现有部署来自旧版 `postgres:16-alpine` 内置数据库，请先阅读上文“从旧 release 内置 PostgreSQL 升级到 pgvector”，完成备份和测试验证后再执行更新命令。
 
 更新到当前稳定版：
 
