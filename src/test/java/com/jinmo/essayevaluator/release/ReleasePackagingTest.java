@@ -19,7 +19,7 @@ class ReleasePackagingTest {
         assertThat(compose).contains("ghcr.io/jinmo100/essay-evaluator-backend");
         assertThat(compose).contains("ghcr.io/jinmo100/essay-evaluator-frontend");
         assertThat(compose).contains("${APP_VERSION:-latest}");
-        assertThat(compose).contains("postgres:16-alpine");
+        assertThat(compose).contains("pgvector/pgvector:pg16");
         assertThat(compose).contains("redis:7-alpine");
         assertThat(compose).contains("${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8088}:80");
         assertThat(compose).doesNotContain("dockerfile:");

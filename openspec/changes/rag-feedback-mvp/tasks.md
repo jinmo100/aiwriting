@@ -61,8 +61,8 @@
 
 ## 7. 端到端验收与收尾
 
-- [ ] 7.1 运行 `.\gradlew.bat test` 并修复后端测试失败
-- [ ] 7.2 运行 `cd frontend && npm run build` 并修复前端构建失败
+- [x] 7.1 运行 `.\gradlew.bat test` 并修复后端测试失败
+- [x] 7.2 运行 `cd frontend && npm run build` 并修复前端构建失败
 - [ ] 7.3 使用 `.env.dev.local` 指向的真实 PostgreSQL/Redis/Provider 配置验证 Flyway V11、索引和反馈生成主流程
-- [ ] 7.4 检查 OpenSpec specs 与实现一致，补充必要文档说明和用户可见中文文案
+- [x] 7.4 检查 OpenSpec specs 与实现一致，补充必要文档说明和用户可见中文文案
 - [ ] 7.5 每完成稳定小功能提交一次，最终汇总变更、风险和剩余后续项
