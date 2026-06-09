@@ -1,0 +1,17 @@
+workflow: full
+phase: design
+build_mode: null
+build_pause: null
+isolation: null
+verify_mode: null
+base_ref: b17b4b39776d7c1c81997d0f22fb4ffd2f8474a3
+design_doc: docs/superpowers/specs/2026-06-09-rag-feedback-mvp-design.md
+plan: null
+verify_result: pending
+verification_report: null
+branch_status: pending
+created_at: 2026-06-09
+verified_at: null
+archived: false
+handoff_context: openspec/changes/rag-feedback-mvp/.comet/handoff/design-context.json
+handoff_hash: f353e4ebb7a7bd9895028be002a1c2bf6670309329253fcfbc0f184522d47a27
