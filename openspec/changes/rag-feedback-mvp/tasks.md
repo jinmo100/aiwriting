@@ -1,11 +1,11 @@
 ## 1. 数据库与部署基础
 
-- [ ] 1.1 新增 `V11__rag_knowledge_base.sql`，启用 pgvector extension 并创建 `background_jobs`、RAG/Embedding 相关表
-- [ ] 1.2 为 V11 新增表、字段、关键约束补充中文 `COMMENT ON TABLE/COLUMN`
-- [ ] 1.3 Seed 约 30 条英语语法、写作、考试策略知识卡，不在 migration 中写入向量
-- [ ] 1.4 为 `background_jobs` active business key、claim 查询、Embedding 默认配置、RAG chunk/embedding/feedback/citation 增加约束和索引
-- [ ] 1.5 将 release Docker PostgreSQL 镜像切换到 `pgvector/pgvector:pg16`
-- [ ] 1.6 更新部署文档，说明 Docker 和宿主机 PostgreSQL 的 pgvector 安装/权限要求
+- [x] 1.1 新增 `V11__rag_knowledge_base.sql`，启用 pgvector extension 并创建 `background_jobs`、RAG/Embedding 相关表
+- [x] 1.2 为 V11 新增表、字段、关键约束补充中文 `COMMENT ON TABLE/COLUMN`
+- [x] 1.3 Seed 约 30 条英语语法、写作、考试策略知识卡，不在 migration 中写入向量
+- [x] 1.4 为 `background_jobs` active business key、claim 查询、Embedding 默认配置、RAG chunk/embedding/feedback/citation 增加约束和索引
+- [x] 1.5 将 release Docker PostgreSQL 镜像切换到 `pgvector/pgvector:pg16`
+- [x] 1.6 更新部署文档，说明 Docker 和宿主机 PostgreSQL 的 pgvector 安装/权限要求
 
 ## 2. 通用后台任务框架
 

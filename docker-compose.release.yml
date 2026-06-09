@@ -2,7 +2,7 @@ name: essay-evaluator
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-essay_evaluator}
       POSTGRES_USER: ${POSTGRES_USER:-essay_evaluator}

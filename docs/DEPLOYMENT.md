@@ -38,12 +38,29 @@ http://<server-ip>:8088
 - PostgreSQL：保存用户、作文、Rubric、评分结果、Provider 配置和 AI 调用日志。
 - Redis：保存 Spring Session，并承担幂等/防重复提交的快速缓存。
 
-`docker-compose.release.yml` 已默认内置 `postgres:16-alpine` 和 `redis:7-alpine`，并且 **不把 5432/6379 发布到宿主机**，普通用户可以一条 compose 命令直接启动。
+`docker-compose.release.yml` 已默认内置 `pgvector/pgvector:pg16` 和 `redis:7-alpine`，并且 **不把 5432/6379 发布到宿主机**，普通用户可以一条 compose 命令直接启动。
 
 已有 PostgreSQL/Redis 的用户可以：
 
 1. 复制一份 `docker-compose.release.yml` 自行修改；
 2. 或在 `.env` 中覆盖 `DB_HOST`、`DB_PORT`、`REDIS_URL`，并按需移除内置 `postgres` / `redis` 服务。
+
+## pgvector 扩展要求
+
+RAG 知识库会通过 Flyway 执行 `CREATE EXTENSION IF NOT EXISTS vector;`，并创建 `vector(1536)` 向量列。
+
+- Docker release：`docker-compose.release.yml` 已使用 `pgvector/pgvector:pg16`，容器内已包含 pgvector 扩展，正常情况下无需额外安装。
+- VPS/宿主机 PostgreSQL：如果你改为连接宿主机或云数据库，必须先由 PostgreSQL 超级用户或具备扩展创建权限的管理员安装并创建 `vector` 扩展，再启动应用执行迁移。
+- Windows 本机调试：如果 `.env.dev.local` 指向本机 PostgreSQL，也需要先安装匹配版本的 pgvector，并用管理员账号在目标库执行 `CREATE EXTENSION IF NOT EXISTS vector;`。
+
+示例（宿主机或自管数据库）：
+
+```sql
+-- 使用 postgres 超级用户或数据库管理员连接目标数据库后执行
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+如果目标数据库没有 pgvector，后端启动时会在 Flyway V11 迁移阶段失败；这属于数据库运行环境缺失，应先修复 PostgreSQL/pgvector，而不是绕过迁移。
 
 ## 镜像与版本标签
 
