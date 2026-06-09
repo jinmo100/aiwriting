@@ -1,12 +1,12 @@
 workflow: full
-phase: design
+phase: build
 build_mode: null
 build_pause: null
 isolation: null
 verify_mode: null
 base_ref: b17b4b39776d7c1c81997d0f22fb4ffd2f8474a3
 design_doc: docs/superpowers/specs/2026-06-09-rag-feedback-mvp-design.md
-plan: null
+plan: docs/superpowers/plans/2026-06-09-rag-feedback-mvp.md
 verify_result: pending
 verification_report: null
 branch_status: pending
