@@ -85,3 +85,6 @@ frontend/.npm/
 
 # Local Codex/agent instruction file
 AGENTS.md
+
+# Local interview notes
+docs/INTERVIEW_GUIDE_AI_BACKEND.md

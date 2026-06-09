@@ -1,8 +1,8 @@
 workflow: full
 phase: build
-build_mode: null
-build_pause: plan-ready
-isolation: null
+build_mode: subagent-driven-development
+build_pause: null
+isolation: branch
 verify_mode: null
 base_ref: b17b4b39776d7c1c81997d0f22fb4ffd2f8474a3
 design_doc: docs/superpowers/specs/2026-06-09-rag-feedback-mvp-design.md
