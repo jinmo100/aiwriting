@@ -1,7 +1,7 @@
 workflow: full
 phase: build
 build_mode: null
-build_pause: null
+build_pause: plan-ready
 isolation: null
 verify_mode: null
 base_ref: b17b4b39776d7c1c81997d0f22fb4ffd2f8474a3
