@@ -19,13 +19,13 @@
 
 ## 3. Embedding 配置后端
 
-- [ ] 3.1 新增 `embedding` 包下 entity、dto、mapper、enum 和基础目录结构
-- [ ] 3.2 实现 `EmbeddingConfigService` 的创建、列表、详情、更新、删除、默认配置逻辑
-- [ ] 3.3 复用 `ApiKeyEncryptionService` 加密保存 Embedding API Key，并在响应中只返回 `hasApiKey` 和 preview
-- [ ] 3.4 实现 OpenAI-compatible `EmbeddingClient`，支持 `/v1/embeddings` 请求、1536 维强校验和错误分类
-- [ ] 3.5 实现未保存配置和已保存配置的 Embedding 连接测试，并记录最近测试状态
-- [ ] 3.6 新增 `EmbeddingConfigController` 暴露 `/api/embedding-configs/**` API
-- [ ] 3.7 补充 `EmbeddingConfigServiceTest` 和 `OpenAiCompatibleEmbeddingClientTest`
+- [x] 3.1 新增 `embedding` 包下 entity、dto、mapper、enum 和基础目录结构
+- [x] 3.2 实现 `EmbeddingConfigService` 的创建、列表、详情、更新、删除、默认配置逻辑
+- [x] 3.3 复用 `ApiKeyEncryptionService` 加密保存 Embedding API Key，并在响应中只返回 `hasApiKey` 和 preview
+- [x] 3.4 实现 OpenAI-compatible `EmbeddingClient`，支持 `/v1/embeddings` 请求、1536 维强校验和错误分类
+- [x] 3.5 实现未保存配置和已保存配置的 Embedding 连接测试，并记录最近测试状态
+- [x] 3.6 新增 `EmbeddingConfigController` 暴露 `/api/embedding-configs/**` API
+- [x] 3.7 补充 `EmbeddingConfigServiceTest` 和 `OpenAiCompatibleEmbeddingClientTest`
 
 ## 4. RAG 索引任务后端
 
