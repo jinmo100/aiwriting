@@ -156,6 +156,14 @@ public class BackgroundJobService {
         return backgroundJobMapper.findLatestForOwnerAndType(jobType.value(), ownerUserId);
     }
 
+    @Transactional(readOnly = true)
+    public BackgroundJob getById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return backgroundJobMapper.selectById(id);
+    }
+
     private BackgroundJob terminalUpdate(Long id, BackgroundJobStatus status) {
         if (id == null) {
             throw new BusinessException("后台任务 ID 不能为空");

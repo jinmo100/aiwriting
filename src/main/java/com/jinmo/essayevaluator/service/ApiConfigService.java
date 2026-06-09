@@ -259,6 +259,14 @@ public class ApiConfigService {
         return config;
     }
 
+    public ApiConfig loadUsableConfigForUser(Long userId, Long configId) {
+        ApiConfig config = loadVisibleConfigForUser(userId, configId);
+        if (config == null) {
+            throw new BusinessException("指定的配置不存在");
+        }
+        return config;
+    }
+
     private ApiConfig loadOwnedConfig(Long id) {
         Long userId = currentUserService.requireUserId();
         ApiConfig config = apiConfigMapper.selectOne(
@@ -276,6 +284,10 @@ public class ApiConfigService {
 
     private ApiConfig loadVisibleConfig(Long id) {
         Long userId = currentUserService.requireUserId();
+        return loadVisibleConfigForUser(userId, id);
+    }
+
+    private ApiConfig loadVisibleConfigForUser(Long userId, Long id) {
         return apiConfigMapper.selectOne(
             new LambdaQueryWrapper<ApiConfig>()
                 .eq(ApiConfig::getId, id)

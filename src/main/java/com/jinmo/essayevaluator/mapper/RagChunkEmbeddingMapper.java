@@ -2,6 +2,7 @@ package com.jinmo.essayevaluator.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.jinmo.essayevaluator.rag.RagChunkEmbedding;
+import com.jinmo.essayevaluator.rag.RagRetrievedChunk;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -66,5 +67,33 @@ public interface RagChunkEmbeddingMapper extends BaseMapper<RagChunkEmbedding> {
         @Param("userId") Long userId,
         @Param("embeddingConfigId") Long embeddingConfigId,
         @Param("embeddingVersion") String embeddingVersion
+    );
+
+    @Select("""
+        SELECT
+            c.id AS chunk_id,
+            COALESCE(d.source_title, d.title) AS source_title,
+            d.document_type AS source_type,
+            c.content AS snippet,
+            (e.embedding_vector <=> CAST(#{queryVectorLiteral} AS vector)) AS distance
+        FROM rag_chunk_embeddings e
+        JOIN rag_chunks c ON c.id = e.chunk_id
+        JOIN rag_documents d ON d.id = c.document_id
+        WHERE e.user_id = #{userId}
+          AND e.embedding_config_id = #{embeddingConfigId}
+          AND e.embedding_version = #{embeddingVersion}
+          AND c.is_active = TRUE
+          AND d.is_active = TRUE
+          AND (d.essay_type IS NULL OR d.essay_type = #{essayType})
+        ORDER BY e.embedding_vector <=> CAST(#{queryVectorLiteral} AS vector)
+        LIMIT #{topK}
+        """)
+    java.util.List<RagRetrievedChunk> searchTopK(
+        @Param("userId") Long userId,
+        @Param("embeddingConfigId") Long embeddingConfigId,
+        @Param("embeddingVersion") String embeddingVersion,
+        @Param("essayType") String essayType,
+        @Param("queryVectorLiteral") String queryVectorLiteral,
+        @Param("topK") int topK
     );
 }

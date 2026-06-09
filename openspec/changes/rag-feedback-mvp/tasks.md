@@ -40,14 +40,14 @@
 
 ## 5. RAG 检索与 Feedback 后端
 
-- [ ] 5.1 新增 `RagQueryBuilder`，从 `RubricScoringResult` 的低分维度、annotations、priorityImprovements 和 taskPrompt 摘要构造 query
-- [ ] 5.2 新增 `RagRetrievalService`，实现 metadata filter + pgvector cosine topK 检索
-- [ ] 5.3 新增 `RagFeedbackPrompt`，隔离评分 JSON、作文内容、任务要求和 citations 等不可信上下文
-- [ ] 5.4 新增 `RagFeedbackValidator`，校验 `overall/items/nextPractice/citationIds` 结构和数量约束
-- [ ] 5.5 实现 `RagFeedbackJobHandler`，通过 `RAG_FEEDBACK` background job 执行检索、生成、保存 feedback/citations
-- [ ] 5.6 实现 `RagFeedbackController`，暴露查询、生成和重试 API
-- [ ] 5.7 实现缺少 Embedding 配置、索引缺失、Chat Provider 失败等 `SKIPPED/FAILED` 状态
-- [ ] 5.8 补充 `RagQueryBuilderTest`、`RagFeedbackValidatorTest` 和基础 retrieval eval 测试
+- [x] 5.1 新增 `RagQueryBuilder`，从 `RubricScoringResult` 的低分维度、annotations、priorityImprovements 和 taskPrompt 摘要构造 query
+- [x] 5.2 新增 `RagRetrievalService`，实现 metadata filter + pgvector cosine topK 检索
+- [x] 5.3 新增 `RagFeedbackPrompt`，隔离评分 JSON、作文内容、任务要求和 citations 等不可信上下文
+- [x] 5.4 新增 `RagFeedbackValidator`，校验 `overall/items/nextPractice/citationIds` 结构和数量约束
+- [x] 5.5 实现 `RagFeedbackJobHandler`，通过 `RAG_FEEDBACK` background job 执行检索、生成、保存 feedback/citations
+- [x] 5.6 实现 `RagFeedbackController`，暴露查询、生成和重试 API
+- [x] 5.7 实现缺少 Embedding 配置、索引缺失、Chat Provider 失败等 `SKIPPED/FAILED` 状态
+- [x] 5.8 补充 `RagQueryBuilderTest`、`RagFeedbackValidatorTest` 和基础 retrieval eval 测试
 
 ## 6. 前端交互
 
