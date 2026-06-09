@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jinmo.essayevaluator.common.exception.BusinessException;
 import com.jinmo.essayevaluator.mapper.BackgroundJobMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ public class BackgroundJobService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
+    @Autowired
     public BackgroundJobService(BackgroundJobMapper backgroundJobMapper, ObjectMapper objectMapper) {
         this(backgroundJobMapper, objectMapper, Clock.systemDefaultZone());
     }

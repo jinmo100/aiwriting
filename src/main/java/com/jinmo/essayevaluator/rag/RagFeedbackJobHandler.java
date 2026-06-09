@@ -2,8 +2,8 @@ package com.jinmo.essayevaluator.rag;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jinmo.essayevaluator.ai.provider.AIProviderAdapter;
 import com.jinmo.essayevaluator.ai.provider.AIProviderRequest;
-import com.jinmo.essayevaluator.ai.provider.AIProviderResult;
 import com.jinmo.essayevaluator.ai.provider.ProviderAdapterRegistry;
 import com.jinmo.essayevaluator.common.exception.BusinessException;
 import com.jinmo.essayevaluator.domain.dto.RubricScoringResult;
@@ -96,12 +96,7 @@ public class RagFeedbackJobHandler implements BackgroundJobHandler {
             score.getResultJson(),
             citations
         );
-        AIProviderResult aiResult = providerAdapterRegistry.get(chatConfig.getProviderType()).generate(
-            new AIProviderRequest(prompt.systemPrompt(), prompt.userPrompt(), prompt.schemaName(), prompt.schemaJson(), null),
-            chatConfig
-        );
-        RagFeedbackValidator.ValidatedFeedback validated = ragFeedbackValidator.validate(aiResult.text());
-        validateCitationIds(validated, citations);
+        RagFeedbackValidator.ValidatedFeedback validated = generateValidatedFeedback(chatConfig, prompt, citations);
         String feedbackJson = objectMapper.writeValueAsString(validated);
         RagFeedback feedback = saveFeedback(job, essay, score, embeddingConfig, query, citations, feedbackJson);
         saveCitations(feedback, citations);
@@ -110,6 +105,35 @@ public class RagFeedbackJobHandler implements BackgroundJobHandler {
         completed.put("feedbackId", feedback.getId());
         completed.put("citationCount", citations.size());
         return JobResult.completed(completed);
+    }
+
+    private RagFeedbackValidator.ValidatedFeedback generateValidatedFeedback(
+        ApiConfig chatConfig,
+        RagFeedbackPrompt.PromptBundle prompt,
+        List<RagRetrievedChunk> citations
+    ) {
+        AIProviderAdapter adapter = providerAdapterRegistry.get(chatConfig.getProviderType());
+        BusinessException firstValidationError = null;
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            String userPrompt = attempt == 1
+                ? prompt.userPrompt()
+                : repairPrompt(prompt.userPrompt(), firstValidationError, citations);
+            String text = adapter.generate(
+                new AIProviderRequest(prompt.systemPrompt(), userPrompt, prompt.schemaName(), prompt.schemaJson(), null),
+                chatConfig
+            ).text();
+            try {
+                RagFeedbackValidator.ValidatedFeedback validated = ragFeedbackValidator.validate(text);
+                validateCitationIds(validated, citations);
+                return validated;
+            } catch (BusinessException validationError) {
+                if (attempt == 2) {
+                    throw validationError;
+                }
+                firstValidationError = validationError;
+            }
+        }
+        throw new BusinessException("RAG Feedback JSON 校验失败");
     }
 
     private Essay loadEssay(Long userId, Long essayId) {
@@ -185,6 +209,30 @@ public class RagFeedbackJobHandler implements BackgroundJobHandler {
         if (hasInvalidCitation) {
             throw new BusinessException("RAG Feedback 引用了不存在的 citation");
         }
+    }
+
+    private String repairPrompt(
+        String originalPrompt,
+        BusinessException validationError,
+        List<RagRetrievedChunk> citations
+    ) {
+        String allowedIds = citations.stream()
+            .map(RagRetrievedChunk::getRankNo)
+            .filter(rankNo -> rankNo != null)
+            .map(String::valueOf)
+            .collect(Collectors.joining(", "));
+        String reason = validationError == null ? "未知校验失败" : validationError.getMessage();
+        return originalPrompt + """
+
+            [系统校验反馈]
+            上一次输出未通过后端校验：%s
+            请基于同一批不可信上下文重新生成严格 JSON。必须满足：
+            1. overall 为非空字符串；
+            2. items 为 1 到 5 条，每条必须有 title/problem/whyItMatters/howToImprove/citationIds；
+            3. citationIds 只能使用这些编号：%s；
+            4. nextPractice 必须是 1 到 3 条非空字符串；
+            5. 只输出 JSON 对象，不输出 Markdown 或解释文字。
+            """.formatted(reason, allowedIds);
     }
 
     private Map<String, Object> result(String message, String action) {

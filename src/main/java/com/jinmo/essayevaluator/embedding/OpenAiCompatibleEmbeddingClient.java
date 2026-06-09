@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jinmo.essayevaluator.ai.provider.AIProviderErrorCode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -31,6 +32,7 @@ public class OpenAiCompatibleEmbeddingClient implements EmbeddingClient {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public OpenAiCompatibleEmbeddingClient(ObjectMapper objectMapper) {
         this(HttpClient.newHttpClient(), objectMapper);
     }
