@@ -17,6 +17,10 @@
         <el-icon><Setting /></el-icon>
         <span>API配置</span>
       </el-menu-item>
+      <el-menu-item index="/embedding-config">
+        <el-icon><Connection /></el-icon>
+        <span>Embedding 配置</span>
+      </el-menu-item>
       <el-menu-item index="/history">
         <el-icon><Document /></el-icon>
         <span>历史记录</span>
@@ -53,7 +57,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Edit, Setting, Document, User, UserFilled, TrendCharts } from '@element-plus/icons-vue'
+import { Edit, Setting, Document, User, UserFilled, TrendCharts, Connection } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()

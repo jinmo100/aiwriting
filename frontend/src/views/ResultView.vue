@@ -173,6 +173,97 @@
 
       <el-card class="feedback-card">
         <template #header>
+          <div class="card-header">
+            <span>知识点增强反馈</span>
+            <el-button
+              v-if="!ragContent && !isRagActive"
+              type="primary"
+              size="small"
+              :loading="ragGenerating"
+              @click="handleGenerateRag"
+            >
+              生成反馈
+            </el-button>
+          </div>
+        </template>
+
+        <div v-loading="ragLoading">
+          <el-alert
+            v-if="isRagActive"
+            type="info"
+            title="知识点分析中，请稍候刷新"
+            :closable="false"
+            show-icon
+          />
+          <template v-else-if="ragContent">
+            <p class="feedback-text">{{ ragContent.overall }}</p>
+            <div class="rag-item-list">
+              <div v-for="(item, index) in ragContent.items" :key="index" class="rag-item">
+                <h4>{{ item.title }}</h4>
+                <p><span class="muted">问题：</span>{{ item.problem }}</p>
+                <p><span class="muted">影响：</span>{{ item.whyItMatters }}</p>
+                <p><span class="muted">改法：</span>{{ item.howToImprove }}</p>
+                <p v-if="item.example?.before || item.example?.after">
+                  <span class="muted">示例：</span>
+                  {{ item.example?.before }} → {{ item.example?.after }}
+                </p>
+                <div class="citation-list">
+                  <el-tag
+                    v-for="citationId in item.citationIds"
+                    :key="citationId"
+                    size="small"
+                    type="success"
+                  >
+                    引用 {{ citationId }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            <div v-if="ragFeedback?.citations?.length" class="citation-panel">
+              <div class="block-title">引用来源</div>
+              <div v-for="citation in ragFeedback.citations" :key="citation.rankNo" class="citation-card">
+                <strong>#{{ citation.rankNo }} {{ citation.sourceTitle }}</strong>
+                <p>{{ citation.snippet }}</p>
+                <small class="muted">{{ citation.sourceType }} · {{ citation.reason }}</small>
+              </div>
+            </div>
+            <div class="block-title">下一步练习</div>
+            <ul class="plain-list">
+              <li v-for="(practice, index) in ragContent.nextPractice" :key="index">{{ practice }}</li>
+            </ul>
+          </template>
+          <el-alert
+            v-else-if="ragFeedback?.status === 'FAILED'"
+            type="warning"
+            title="知识点增强反馈生成失败，但不影响本次作文评分结果"
+            :description="ragFeedback.errorMessage || ragFeedback.message"
+            show-icon
+            :closable="false"
+          >
+            <template #default>
+              <el-button size="small" type="primary" :loading="ragGenerating" @click="handleRetryRag">重试</el-button>
+            </template>
+          </el-alert>
+          <el-alert
+            v-else-if="ragFeedback?.status === 'SKIPPED'"
+            type="info"
+            :title="ragFeedback.message || '暂时无法生成知识点增强反馈'"
+            :closable="false"
+            show-icon
+          >
+            <template #default>
+              <el-button size="small" @click="router.push('/embedding-config')">去配置 Embedding</el-button>
+            </template>
+          </el-alert>
+          <el-empty v-else description="尚未生成知识点增强反馈">
+            <el-button type="primary" :loading="ragGenerating" @click="handleGenerateRag">生成知识点增强反馈</el-button>
+            <el-button @click="router.push('/embedding-config')">Embedding 配置</el-button>
+          </el-empty>
+        </div>
+      </el-card>
+
+      <el-card class="feedback-card">
+        <template #header>
           <span>评分维度</span>
         </template>
         <div class="dimension-list">
@@ -331,7 +422,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { CircleCloseFilled, SuccessFilled, WarningFilled } from '@element-plus/icons-vue'
 import { getEssayDetail, retryEssay } from '@/api/essay'
-import type { EssayScoreResponse } from '@/types'
+import { getRagFeedback, generateRagFeedback, retryRagFeedback } from '@/api/rag'
+import type { EssayScoreResponse, RagFeedback, RagFeedbackContent } from '@/types'
 import { buildHighlightedSegments } from '@/utils/annotationHighlight'
 
 const route = useRoute()
@@ -339,9 +431,13 @@ const router = useRouter()
 const loading = ref(false)
 const retrying = ref(false)
 const detail = ref<EssayScoreResponse | null>(null)
+const ragFeedback = ref<RagFeedback | null>(null)
+const ragLoading = ref(false)
+const ragGenerating = ref(false)
 const thinkingStepIndex = ref(0)
 let pollingTimer: number | undefined
 let thinkingTimer: number | undefined
+let ragPollingTimer: number | undefined
 const pendingStorageKey = 'essay-evaluator:pendingSubmission'
 const thinkingSteps = [
   '正在理解题目要求...',
@@ -352,6 +448,15 @@ const thinkingSteps = [
 
 const scoring = computed(() => detail.value?.result || null)
 const aiUsage = computed(() => detail.value?.aiUsage || null)
+const ragContent = computed<RagFeedbackContent | null>(() => {
+  if (!ragFeedback.value?.feedbackJson) return null
+  try {
+    return JSON.parse(ragFeedback.value.feedbackJson) as RagFeedbackContent
+  } catch {
+    return null
+  }
+})
+const isRagActive = computed(() => ['PENDING', 'RUNNING'].includes(ragFeedback.value?.status || ''))
 const highlightedEssaySegments = computed(() => buildHighlightedSegments(
   detail.value?.essay.content || '',
   scoring.value?.annotations || []
@@ -379,6 +484,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPolling()
+  stopRagPolling()
 })
 
 async function loadDetail(id: number, showLoading = false) {
@@ -387,6 +493,9 @@ async function loadDetail(id: number, showLoading = false) {
   }
   try {
     detail.value = await getEssayDetail(id)
+    if (detail.value.scoringStatus === 'COMPLETED') {
+      loadRagFeedback(id)
+    }
     if (isPending.value) {
       startPolling()
     } else {
@@ -401,6 +510,24 @@ async function loadDetail(id: number, showLoading = false) {
     if (showLoading) {
       loading.value = false
     }
+  }
+}
+
+async function loadRagFeedback(id: number, showLoading = false) {
+  if (showLoading) {
+    ragLoading.value = true
+  }
+  try {
+    ragFeedback.value = await getRagFeedback(id)
+    if (isRagActive.value) {
+      startRagPolling()
+    } else {
+      stopRagPolling()
+    }
+  } catch (error) {
+    console.error('加载 RAG Feedback 失败:', error)
+  } finally {
+    ragLoading.value = false
   }
 }
 
@@ -421,6 +548,23 @@ function stopPolling() {
     pollingTimer = undefined
   }
   stopThinkingTimer()
+}
+
+function startRagPolling() {
+  if (ragPollingTimer) return
+  ragPollingTimer = window.setInterval(() => {
+    const id = Number(route.params.id)
+    if (id) {
+      loadRagFeedback(id)
+    }
+  }, 3000)
+}
+
+function stopRagPolling() {
+  if (ragPollingTimer) {
+    window.clearInterval(ragPollingTimer)
+    ragPollingTimer = undefined
+  }
 }
 
 function startThinkingTimer() {
@@ -463,6 +607,44 @@ async function handleRetry() {
     console.error('重试失败:', error)
   } finally {
     retrying.value = false
+  }
+}
+
+async function handleGenerateRag() {
+  const id = Number(route.params.id)
+  if (!id || ragGenerating.value) return
+  ragGenerating.value = true
+  try {
+    ragFeedback.value = await generateRagFeedback(id)
+    ElMessage.success(
+      ragFeedback.value.status === 'SKIPPED'
+        ? (ragFeedback.value.message || '请先完成 Embedding 配置或知识索引')
+        : '知识点增强反馈任务已提交'
+    )
+    if (isRagActive.value) {
+      startRagPolling()
+    }
+  } catch (error) {
+    console.error('生成 RAG Feedback 失败:', error)
+  } finally {
+    ragGenerating.value = false
+  }
+}
+
+async function handleRetryRag() {
+  const id = Number(route.params.id)
+  if (!id || ragGenerating.value) return
+  ragGenerating.value = true
+  try {
+    ragFeedback.value = await retryRagFeedback(id)
+    ElMessage.success('已重试知识点增强反馈')
+    if (isRagActive.value) {
+      startRagPolling()
+    }
+  } catch (error) {
+    console.error('重试 RAG Feedback 失败:', error)
+  } finally {
+    ragGenerating.value = false
   }
 }
 
@@ -663,6 +845,53 @@ function scrollToAnnotation(index?: number) {
 .plain-list {
   margin-left: 18px;
   line-height: 1.8;
+}
+
+.rag-item-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.rag-item {
+  padding: 14px 16px;
+  border: 1px solid #d9ecff;
+  border-radius: 10px;
+  background: #f5faff;
+}
+
+.rag-item h4 {
+  margin: 0 0 8px;
+  color: #303133;
+}
+
+.rag-item p {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.citation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.citation-panel {
+  margin-top: 18px;
+}
+
+.citation-card {
+  padding: 12px 14px;
+  margin-top: 10px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.citation-card p {
+  margin: 6px 0;
+  line-height: 1.7;
 }
 
 .usage-details {

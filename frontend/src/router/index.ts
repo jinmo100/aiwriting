@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'API配置' }
   },
   {
+    path: '/embedding-config',
+    name: 'EmbeddingConfig',
+    component: () => import('@/views/EmbeddingConfigView.vue'),
+    meta: { title: 'Embedding 配置' }
+  },
+  {
     path: '/submit',
     name: 'Submit',
     component: () => import('@/views/SubmitView.vue'),

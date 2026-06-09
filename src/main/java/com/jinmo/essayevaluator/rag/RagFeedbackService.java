@@ -91,7 +91,7 @@ public class RagFeedbackService {
         if (job.getStatus() == BackgroundJobStatus.PENDING) {
             scheduleDispatchAfterCommit(job.getId());
         }
-        RagFeedback feedback = ragFeedbackMapper.findLatestForUserEssay(userId, essayId);
+        RagFeedback feedback = ensureFeedbackPlaceholder(userId, essay, score, embeddingConfig, job);
         return toResponse(essayId, feedback, job);
     }
 
@@ -131,6 +131,42 @@ public class RagFeedbackService {
             return embeddingConfigService.loadOwnedConfigForUser(userId, embeddingConfigId);
         }
         return embeddingConfigService.getDefaultConfigForUser(userId);
+    }
+
+    private RagFeedback ensureFeedbackPlaceholder(
+        Long userId,
+        Essay essay,
+        EssayScore score,
+        EmbeddingConfig embeddingConfig,
+        BackgroundJob job
+    ) {
+        RagFeedback existing = ragFeedbackMapper.findByScoreAndConfig(userId, score.getId(), embeddingConfig.getId());
+        if (existing != null) {
+            // 用户重新生成时先把旧内容转成占位态，避免前端轮询期间继续展示旧完成结果。
+            existing.setApiConfigId(score.getApiConfigId());
+            existing.setJobId(job.getId());
+            existing.setQueryText(null);
+            existing.setRetrievedChunkIds(null);
+            existing.setFeedbackJson(null);
+            ragFeedbackMapper.updateById(existing);
+            ragFeedbackCitationMapper.delete(
+                new LambdaQueryWrapper<RagFeedbackCitation>()
+                    .eq(RagFeedbackCitation::getFeedbackId, existing.getId())
+            );
+            return existing;
+        }
+
+        // 后台任务可能因为缺少知识索引而 SKIPPED、因为 Provider 异常而 FAILED；
+        // 先落一条不含 feedback_json 的占位记录，结果页才能通过 getFeedback 持续看到任务状态。
+        RagFeedback placeholder = new RagFeedback();
+        placeholder.setUserId(userId);
+        placeholder.setEssayId(essay.getId());
+        placeholder.setScoreId(score.getId());
+        placeholder.setApiConfigId(score.getApiConfigId());
+        placeholder.setEmbeddingConfigId(embeddingConfig.getId());
+        placeholder.setJobId(job.getId());
+        ragFeedbackMapper.insert(placeholder);
+        return placeholder;
     }
 
     private RagFeedbackResponse toResponse(Long essayId, RagFeedback feedback, BackgroundJob job) {

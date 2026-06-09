@@ -95,6 +95,102 @@ export interface ConfigSecurityPolicy {
   allowApiKeyReveal: boolean
 }
 
+export type BackgroundJobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED'
+
+export type EmbeddingProviderType = 'OPENAI_EMBEDDINGS'
+
+export interface EmbeddingConfig {
+  id: number
+  configName: string
+  providerType: EmbeddingProviderType
+  baseUrl: string
+  modelName: string
+  dimensions: number
+  timeoutSeconds?: number
+  isDefault: boolean
+  hasApiKey: boolean
+  apiKeyPreview?: string
+  lastTestStatus?: string
+  lastTestMessage?: string
+  lastTestLatencyMs?: number
+  lastTestedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface EmbeddingConfigRequest {
+  configName: string
+  providerType: EmbeddingProviderType
+  baseUrl: string
+  apiKey?: string
+  modelName: string
+  dimensions: number
+  timeoutSeconds?: number
+  isDefault?: boolean
+}
+
+export interface EmbeddingTestResponse {
+  success: boolean
+  providerType: EmbeddingProviderType
+  modelName: string
+  dimensions: number
+  latencyMillis: number
+  message: string
+  errorCode?: string
+}
+
+export interface RagIndexStatus {
+  configured: boolean
+  ownerUserId?: number
+  embeddingConfigId?: number
+  embeddingVersion?: string
+  indexedChunks?: number
+  jobId?: number
+  status?: BackgroundJobStatus
+  resultJson?: string
+  errorCode?: string
+  errorMessage?: string
+  updatedAt?: string
+  message?: string
+}
+
+export interface RagFeedbackCitation {
+  id?: number
+  chunkId?: number
+  sourceTitle?: string
+  sourceType?: string
+  snippet?: string
+  rankNo?: number
+  reason?: string
+}
+
+export interface RagFeedback {
+  essayId: number
+  feedbackId?: number
+  jobId?: number
+  status?: BackgroundJobStatus
+  resultJson?: string
+  errorCode?: string
+  errorMessage?: string
+  feedbackJson?: string
+  citations: RagFeedbackCitation[]
+  updatedAt?: string
+  message?: string
+}
+
+export interface RagFeedbackContent {
+  overall: string
+  items: Array<{
+    title: string
+    problem: string
+    whyItMatters: string
+    howToImprove: string
+    example?: { before?: string; after?: string }
+    citationIds: number[]
+  }>
+  nextPractice: string[]
+}
+
 // 用户认证相关类型
 export interface AuthUser {
   id: number

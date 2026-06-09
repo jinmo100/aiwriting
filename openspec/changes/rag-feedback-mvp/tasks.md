@@ -51,13 +51,13 @@
 
 ## 6. 前端交互
 
-- [ ] 6.1 新增前端 Embedding 配置 API 类型和请求封装
-- [ ] 6.2 新增 `EmbeddingConfigView.vue`，支持新增、编辑、删除、测试连接、设置默认配置
-- [ ] 6.3 在导航中加入“Embedding 配置”入口，并保持现有 API 配置、提交作文、历史记录入口可用
-- [ ] 6.4 在 Embedding 配置页展示知识索引状态、进度、失败信息和“构建我的知识索引”入口
-- [ ] 6.5 新增 RAG Feedback 前端 API 类型和请求封装
-- [ ] 6.6 在作文结果页新增“知识点增强反馈”区块，处理未配置、未索引、生成中、完成、失败和重试状态
-- [ ] 6.7 前端仅展示 citation 安全字段，不展示 embedding vector、metadata_json、系统 prompt 或过长内部原文
+- [x] 6.1 新增前端 Embedding 配置 API 类型和请求封装
+- [x] 6.2 新增 `EmbeddingConfigView.vue`，支持新增、编辑、删除、测试连接、设置默认配置
+- [x] 6.3 在导航中加入“Embedding 配置”入口，并保持现有 API 配置、提交作文、历史记录入口可用
+- [x] 6.4 在 Embedding 配置页展示知识索引状态、进度、失败信息和“构建我的知识索引”入口
+- [x] 6.5 新增 RAG Feedback 前端 API 类型和请求封装
+- [x] 6.6 在作文结果页新增“知识点增强反馈”区块，处理未配置、未索引、生成中、完成、失败和重试状态
+- [x] 6.7 前端仅展示 citation 安全字段，不展示 embedding vector、metadata_json、系统 prompt 或过长内部原文
 
 ## 7. 端到端验收与收尾
 

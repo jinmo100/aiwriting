@@ -23,6 +23,21 @@ public interface RagFeedbackMapper extends BaseMapper<RagFeedback> {
         """)
     RagFeedback findLatestForUserEssay(@Param("userId") Long userId, @Param("essayId") Long essayId);
 
+    @Select("""
+        SELECT *
+        FROM rag_feedbacks
+        WHERE user_id = #{userId}
+          AND score_id = #{scoreId}
+          AND embedding_config_id = #{embeddingConfigId}
+        ORDER BY created_at DESC
+        LIMIT 1
+        """)
+    RagFeedback findByScoreAndConfig(
+        @Param("userId") Long userId,
+        @Param("scoreId") Long scoreId,
+        @Param("embeddingConfigId") Long embeddingConfigId
+    );
+
     @Delete("""
         DELETE FROM rag_feedbacks
         WHERE user_id = #{userId}
