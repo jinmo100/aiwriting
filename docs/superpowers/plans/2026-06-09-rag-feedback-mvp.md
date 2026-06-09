@@ -2,6 +2,7 @@
 change: rag-feedback-mvp
 design-doc: docs/superpowers/specs/2026-06-09-rag-feedback-mvp-design.md
 base-ref: 1440eb65fd9f98b3d1291381a84a22fd189a29bb
+archived-with: 2026-06-10-rag-feedback-mvp
 ---
 
 # RAG Feedback MVP Implementation Plan

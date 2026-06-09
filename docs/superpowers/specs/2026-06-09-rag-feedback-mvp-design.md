@@ -2,6 +2,8 @@
 comet_change: rag-feedback-mvp
 role: technical-design
 canonical_spec: openspec
+status: final
+archived-with: 2026-06-10-rag-feedback-mvp
 ---
 
 # RAG Feedback MVP 技术设计
