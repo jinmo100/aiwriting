@@ -9,13 +9,13 @@
 
 ## 2. 通用后台任务框架
 
-- [ ] 2.1 新增 `job` 包下 `BackgroundJob` entity、mapper、dto、`BackgroundJobType`、`BackgroundJobStatus`
-- [ ] 2.2 实现 `BackgroundJobService.createOrReuse`、active business key 防重复和 payload/result 安全保存
-- [ ] 2.3 实现 claim/lock、markCompleted、markFailed、markSkipped、attempt/error/result 状态流转
-- [ ] 2.4 实现 `BackgroundJobHandler` SPI 和 `BackgroundJobDispatcher`，按 job type 分发到 handler
-- [ ] 2.5 新增 `BackgroundJobExecutorConfig`，与现有评分 executor 隔离
-- [ ] 2.6 实现有限管理员 job 查询接口，返回状态、错误摘要和安全 result，不暴露敏感 payload
-- [ ] 2.7 补充 `BackgroundJobServiceTest`，覆盖防重复、claim/lock、状态流转和失败保存
+- [x] 2.1 新增 `job` 包下 `BackgroundJob` entity、mapper、dto、`BackgroundJobType`、`BackgroundJobStatus`
+- [x] 2.2 实现 `BackgroundJobService.createOrReuse`、active business key 防重复和 payload/result 安全保存
+- [x] 2.3 实现 claim/lock、markCompleted、markFailed、markSkipped、attempt/error/result 状态流转
+- [x] 2.4 实现 `BackgroundJobHandler` SPI 和 `BackgroundJobDispatcher`，按 job type 分发到 handler
+- [x] 2.5 新增 `BackgroundJobExecutorConfig`，与现有评分 executor 隔离
+- [x] 2.6 实现有限管理员 job 查询接口，返回状态、错误摘要和安全 result，不暴露敏感 payload
+- [x] 2.7 补充 `BackgroundJobServiceTest`，覆盖防重复、claim/lock、状态流转和失败保存
 
 ## 3. Embedding 配置后端
 
